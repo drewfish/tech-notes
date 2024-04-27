@@ -1,0 +1,113 @@
+
+ubuntu:  control-shift-U <code> enter
+
+http://svn.openfoundry.org/pugs/docs/quickref/unicode
+https://tabatkins.github.io/symbols/
+
+    U+00A1 ¡ inverted exclaimation point
+    U+00A2 ¢ cent
+    U+00A3 £ pound
+    U+00A5 ¥ yen
+    U+00A7 § section
+    U+00A9 © copyright
+    U+00AB « opening euroquote
+    U+00AC ¬ not sign
+    U+00AE ® registered
+    U+00B0 ° degrees
+    U+00B1 ± plus-minus sign
+    U+00B2 ² superscript 2
+    U+00B3 ³ superscript 3
+    U+00B5 µ micro
+    U+00B6 ¶ pilcrow
+    U+00B9 ¹ superscript 1
+    U+00BB » closing euroquote
+    U+00BC ¼ one quarter
+    U+00BD ½ one half
+    U+00BE ¾ three quarters
+    U+00BF ¿ inverted question mark
+    U+00D7 × multiplication sign
+    U+00F7 ÷ division sign
+    U+2044 ⁄ fraction slash
+    U+2010 ‐ TODO dash
+    U+2011 ‑ TODO dash
+    U+2012 ‒ TODO dash
+    U+2013 – en dash
+    U+2014 — em dash
+    U+2103 ℃
+    U+2109 ℉
+    U+2020 † dagger
+    U+2021 ‡ double dagger
+    U+2030 ‰ percent
+    U+2031 ‱ permill
+    U+203D ‽ interobang
+    U+2026 … elipsis
+    U+2074 ⁴ superscript 4
+    U+2075 ⁵ superscript 5
+    U+2076 ⁶ superscript 6
+    U+2077 ⁷ superscript 7
+    U+2078 ⁸ superscript 8
+    U+2079 ⁹ superscript 9
+    U+2080 ₀ subscript 0
+    U+2081 ₁ subscript 1
+    U+2082 ₂ subscript 2
+    U+2083 ₃ subscript 3
+    U+2084 ₄ subscript 4
+    U+2085 ₅ subscript 5
+    U+2086 ₆ subscript 6
+    U+2087 ₇ subscript 7
+    U+2088 ₈ subscript 8
+    U+2089 ₉ subscript 9
+    U+20AC € euro
+    U+2126 Ω ohm
+    U+2150 ⅐ one seventh
+    U+2151 ⅑ one nineth
+    U+2152 ⅒ one tenth
+    U+2153 ⅓ one third
+    U+2154 ⅔ two thirds
+    U+2155 ⅕ one fifth
+    U+2156 ⅖ two fifths
+    U+2157 ⅗ three fifths
+    U+2158 ⅘ four fifths
+    U+2159 ⅙ one sixth
+    U+215A ⅚ five sixths
+    U+215B ⅛ one eighth
+    U+215C ⅜ three eighths
+    U+215D ⅝ five eighths
+    U+215E ⅞ seven eighths
+    U+215F ⅟ Fraction Numerator One
+    U+2189 ↉ Vulgar Fraction Zero Thirds
+    U+2190 ← arrow left
+    U+2191 ↑ arrow up
+    U+2192 → arrow right
+    U+2193 ↓ arrow down
+    U+2194 ↔ arrow left right
+    U+2195 ↕ arrow up down
+    U+2196 ↖ arrow up left
+    U+2197 ↗ arrow up right
+    U+2198 ↘ arrow down right
+    U+2199 ↙ arrow down left
+    U+2200 ∀
+    U+2203 ∃
+    U+2206 ∆ delta
+    U+221A √ square root
+    U+221B ∛ cube root
+    U+221C ∜ quadratic root
+    U+221E ∞ infinity
+    U+2245 ≅ approximately equals
+    U+2248 ≈ approximately
+    U+2260 ≠ not equal to
+    U+23DA ⏚
+    U+23E8 ⏨ subscript 10
+    U+2588 █ full block
+    U+2589 ▉ left 7/8 block
+    U+258A ▊ left 3/4 block
+    U+258B ▋ left 5/8 block
+    U+258C ▌ left 1/2 block
+    U+258D ▍ left 3/8 block
+    U+258E ▎ left 1/4 block
+    U+258F ▏ left 1/8 block
+    U+2591 ░ light shade
+    U+267A ♺ recycling
+    U+2713 ✓ check mark
+
+

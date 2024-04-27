@@ -1,0 +1,22 @@
+
+starting mysql
+    /usr/local/bin/safe_mysqld
+
+show dotfiles
+    defaults write com.apple.finder AppleShowAllFiles true
+
+make the dock 2D
+    defaults write com.apple.dock no-glass -boolean yes
+
+disable dashboard
+    defaults write com.apple.dashboard mcx-disabled -boolean yes
+
+change your screen grab format
+    defaults write com.apple.screencapture type jpg
+    tiff pdf png  jpg
+    logout/in for changes to take effect
+
+say [string]
+
+
+

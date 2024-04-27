@@ -1,0 +1,40 @@
+# link has gone stale :sad:
+#   http://www.kuro5hin.org/story/2002/12/4/103535/463
+
+
+
+ELEMENTS
+
+  - point
+  - line
+  - shape
+  - mass
+  - space
+    - field
+  - change
+  - value
+  - hue
+  - media
+  - type
+  - scale
+
+
+
+PRINCIPLES
+
+  - balance
+  - direction
+  - ratio
+  - juxtaposition
+  - repetition
+  - variation
+  - pattern
+  - rhythm-tempo
+  - emphasis
+  - contrast
+  - harmony
+  - unity
+  - function
+
+
+

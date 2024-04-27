@@ -1,0 +1,78 @@
+
+
+global options
+    --context={string}
+    --cluster={string}
+    --namespace={string}
+    --token={string}        bearer token for authn to API server
+
+minikube start
+
+kubectl proxy (daemon)
+    proxy from localhost to k8s api
+    default port 8001
+
+kubectl config
+    name, cluster, authinfo, namespace
+
+
+Pod
+    containers in pod communcate via localhost (different ports)
+
+Deployment
+    metadata:
+        name: {deployment-name}
+    spec:
+        replicas: 1
+        strategy: {RollingUpdate,Recreate}
+        selector:
+            matchLabels: {... must match template.metadata.labels below...}
+        template:       # <-- pod template
+            metadata:
+                labels: {}
+            spec:
+                containers: []
+
+Service
+    a logical set of pods, and policy to access them
+    gives pods own IP address and DNS name
+    service types
+        ClusterIP (default)
+            service only reachable w/in cluster
+        NodePort
+            exposes service on each node at static port at {node-ip}:{node-port}
+            .spec.ports[*].nodePort
+        LoadBalancer
+            exposes service externally using cloud-provider load balancer
+                annotations used to configure
+            if more-than-one port, all ports must have same protocol
+                feature gate MixedProtocolLBService relaxes that
+        ExternalName
+            maps service to external name
+            .spec.externalName
+    metadata:
+        name: ...
+            leads to {service-name}.{namespace} in CoreDNS
+            pods in the namespace can resolve {service-name} via DNS
+    spec:
+        selector: {}
+        type: {see above}
+        ports: []
+            name: ...
+                required when more-than-one port
+            protocol: TCP,UDP,SCTP,HTTP,PROXY
+            port: exposed
+            targetPort: in pod
+                defaults to same value as .port
+                can use the port name specified in the pod
+
+
+StatefulSet
+    manages deploymnet and scaling of pods
+    provides guarantees about ordering and uniqueness of pods
+    maintains a sticky identity for each pod
+    all pods have a single identical container spec
+    can be used to provide storage volumes for persistent data
+        match volumes to pods
+
+

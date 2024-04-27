@@ -1,0 +1,115 @@
+
+
+INVOCATION
+    login shell starts with `-` (e.g. $0)
+    interactive shell
+        not started with -c
+        $- contains i
+        $PS1 set
+
+    interactive login or non-interactive with --login
+        /etc/profile                                if exists
+            source $(/usr/libexec/path_helper -s)
+            source /etc/bashrc
+        ~/.bash_profile,~/.bash_login,~.profile     first one that exists
+
+    interactive not-login
+        ~/.bashrc
+
+    non-interactive
+        sources file specified by $BASH_ENV, if it exists
+
+    rshd or sshd
+        ~/.bashrc
+
+
+SHELL VARIABLES
+    $*
+        positional parameters starting from 1
+    $@
+        positional parameters starting from 1
+        "$@" is like "$1" "$2" ...
+    $#
+        number of positional parameters
+    $?
+        exit status of most recent forground pipeline
+    $-
+        Expands to the current option flags as specified upon invocation, by the set builtin command, or those set by the shell itself (such as the -i option).
+        {set options}, also `i` for interactive
+    $$
+        pid of shell
+    $!
+        pid of most recently executed background process
+    $0
+        name of shell or shellscript
+    $BASH
+        full path of running bash
+    $BASH_ENV
+        sourced when executing a shell script
+        must be full path
+    $BASH_REMATCH array
+        filled by =~ operator of [[
+    $BASH_SUBSHELL integer
+        incremented for each subshell
+    ${BASH_VERSINFO[0]}
+        major version of running bash
+    $DIRSTACK array
+        can be assigned to, but use pushd/popd to change add/remove
+        won't change current dir
+    $FUNCNAME array
+        shell functions in current call stack
+    $PS1
+        primary
+    $PS2
+        secondary
+    $PS3
+        select command
+    $PS4
+        execution trace
+        first character replicated multiple times
+    $SHELL
+        full path of running bash
+    $SHLVL integer
+        incremented each time an instance of bash is started
+
+
+COMMANDS
+    set
+        -a
+        -b  report terminated jobs immediately (requires job control)
+        -e  exit immediately if simple command has non-zero exit code
+        -f
+        -h
+        -k
+        -m  enable job control
+        -n  read commands but don't execute them
+        -o {option}
+            braceexpand     same as -B
+            errexit         same as -e
+            errtrace        same as -E
+            functrace       same as -T
+            histexpand      same as -H
+            keyword         same as -k
+            noclobber       same as -C
+            noexec          same as -n
+            noglob          same as -f
+            notify          same as -b
+            nounset         same as -u
+            onecmd          same as -t
+            pipefail        exit status of pipeline is first command that has non-zero exit status
+            pysical         same as -P
+        -p  enable privileged mode:  $ENV nor $BASH_ENV honored, functions not inherited, etc
+        -t  exit after one command
+        -u  treat unset variables as errors
+        -v  print input lines as they're read
+        -x  display each expanded simple command, prefaced by $PS4
+        -B  enable brace expansion
+        -C  disable overwriting files with >,>&,<>
+        -E  inherit traps on ERR
+        -H  enable ! style history expansion
+        -P  disable following symbolic links when changing dir
+        -T  inherit traps on DEBUG and RETURN
+        --  following args become positional parameters
+        -   following args become positional parameters, -x and -v turned off
+
+

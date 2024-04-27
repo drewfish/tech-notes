@@ -1,0 +1,92 @@
+
+
+https://docs.github.com/en/packages
+
+
+
+    - uses: actions/setup-node@v2
+      with:
+        registry-url: 'https://npm.pkg.github.com'
+    - run: npm install
+    ...
+    - run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    for NPM packages
+        limit 1000 versions
+            consider deleting older ones
+        only supports scoped NPM packages
+        anyone with read permission of the repo can see the repo's packages
+        npm.pkg.github.com
+        authenticating
+            GITHUB_TOKEN
+                used by Github Actions
+                publish, install, delete
+                GITHUB_TOKEN must be referenced in workflow
+                - run: ... ${{ secrets.GITHUB_TOKEN }}
+            personal access token
+                can assign different scopes
+                publish, install
+                login [one of]
+                    edit ~/.npmrc
+                        @empoloyer:registry=https://npm.pkg.github.com/
+                        //npm.pkg.github.com/:_authToken=${TOKEN}
+                    npm login
+                        --registry=https://npm.pkg.github.com
+                        --scope=@empoloyer
+                        Username: ${github user name}
+                        Password: ${github personal access token}
+                        Email: ${public email address}
+            provisioning
+                https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token
+                github.com account Settings
+                Developer settings
+                Personal access tokens
+                Generate new token
+                read:packages
+                write:packages
+                delete:packages
+                Generate token
+        publishing
+            name in package.json
+                should be `@employer/${repo}`
+            repository in package.json
+                should be `git://github.com/employer/${repo}.git`
+            can publish multiple packages to same repo
+            one of
+                publishConfig in package.json
+                    "registry": "https://npm.pkg.github.com"
+                local .npmrc
+                    registry=https://npm.pkg.github.com/employer
+        installing
+            authenticate (see above)
+            .npmrc in consumer directory
+                @employer:registry=https://npm.pkg.github.com/
+            npm install
+        deleting
+            can delete
+                an entire private package
+                a specific version of a private package
+                an entire public package, if low number of downloads
+                a specific version of a public package, if low number of downloads
+            can restore
+                within 30 days of deletion
+                same namespace still available
+            perms
+                must have admin access to repo
+            actions/delete-package-versions@v1
+                would be nice if there was a "keep X number of newest versions"
+                ... for each semver major
+    IDEAS
+        action check-publish-repo
+            validates the above
+        action employer/npm-publish-to-github
+            validates the above AND
+            other kinds of validations
+                .npmignore etc
+            publishes
+
+
+

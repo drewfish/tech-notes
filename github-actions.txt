@@ -1,0 +1,233 @@
+
+
+.github/workflows/${name}.yaml
+    name: ${name}       # what appears in Github Actions UX
+    on:
+        push:
+            branches: [ main ]
+        pull_request:
+            branches: [ main ]
+        schedule:
+        - cron: "0 2 * * 1-5"
+    workflow_dispatch: { ... }  # allows manual trigger
+    jobs:
+        ${name}:
+            runs-on: ${runner}  # ubuntu-latest is probably a good choice
+            steps:
+            - uses: actions/checkout@v2
+            - name: Setup Node
+              uses: actions/setup-node@v1
+              with:
+                node-version: '12.x'
+            - name: Install Dependencies
+              run: npm ci
+            - id: oyya
+              name: oy ya ho
+              run: echo me
+
+            - name: run a one-line script
+              run: echo hello world
+            - name: run a multi-line script
+              run: |
+                echo yeah
+                echo no
+
+
+ENVIRONMENT VARIABLES
+    can be defined at jobs or steps level
+    CI                  always `true`
+    GITHUB_ACTION       unique ID
+    GITHUB_ACTIONS      `true` when run by Github Actions
+    GITHUB_ACTOR
+    GITHUB_API_URL
+    GITHUB_BASE_REF     only for PR events, base branch
+    GITHUB_EVENT_NAME
+    GITHUB_EVENT_PATH   path to JSON with full event payload
+    GITHUB_GRAPHQL_URL
+    GITHUB_HEAD_REF     only for PR events, head branch
+    GITHUB_REF          branch or tag `refs/heads/foo` `refs/tags/bar`
+    GITHUB_REPOSITORY
+    GITHUB_RUN_ID       unique ID, doesn't change for re-run
+    GITHUB_RUN_NUMBER   unique number, begins at 1, doesn't change for re-run
+    GITHUB_SERVER_URL
+    GITHUB_SHA
+    GITHUB_WORKFLOW     name
+    GITHUB_WORKSPACE    copy of repo if `actions/checkout`
+
+
+TRIGGERS
+    on: ${... triggers ... }
+    push
+        branches: [...]
+    pull_request
+        branches: [...]
+    build_page
+    release
+        types: [ created ]
+    schedule
+        - cron: "0 2 * * 1-5"
+    worflow_dispatch
+        can ask for inputs
+    respository_dispatch
+        from POSTs to github API
+    webhook events
+        ... lots not listed in these notes ...
+        create
+            branch of tag created
+        delete
+            branch or tag deleted
+        public
+            triggered when private repo is made public
+        pull_request
+            types:
+                assigned, opened, synchronized, reopened    # default set
+                unassigned, labeled, unlabeled, edited, closed, ready_for_review,
+                locked, unlocked, review_requested, review_request_removed
+            secrets are not passed to the runner (except GITHUB_TOKEN, which has read-only perms)
+        push
+        registry_package
+            triggered when a package is `published` or `updated`
+        workflow_run
+            triggered when another workflow is requested or completed
+            e.g. analyze results and post comment to PR
+            workflows: [ "blah" ]
+            branches: [ main ]
+            types: [ completed, requested ]
+
+
+CONDITIONAL JOBS
+    https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions
+    replacement anywhere with ${{ <expression> }}
+    can omit wrapper in an `if` step conditional
+    steps:
+        - name: foo
+          run: bar
+          if: <expression>
+    LITERALS
+        keywords: true false null
+        number in JSON format
+        string with single quotes
+            'Mona the Octocat'
+            'It''s open source!'
+    OPERATORS
+        ()  logical grouping
+        []  indexing
+        .   property dereference
+        !   not
+        < <= > >= == != && ||
+        loose type comparision, coerces to number
+        ignores case when comparing
+        object and arrays only equal if same instance
+    FUNCTIONS
+        casts to string
+            null    ''
+            boolean 'true' or 'false'
+            number  decimal format, perhaps with exponential
+            array   --not converted--
+            object  --not converted--
+        contains ( search, item )
+        startsWith( searchString, searchValue )
+        endsWith( searchString, searchValue )
+        format( string, replace0, replace1, ... )   -- `{${index}}`
+        join( array, optionalSeparator )
+        toJSON( value )
+        fromJSON( value )
+        hashFiles( path )
+            single hash from all files in path
+            path relative to GITHUB_WORKSPACE
+        success()           -- returns true if all previous steps are `success`|`skipped`
+        always()            -- returns true always
+        cancelled()         -- returns true if workflow was cancelled
+        falure()            -- returns true if nay previous job failed
+    OBJECT FILTERS
+        `foo.*.bar`
+        returns an array
+    CONTEXTS
+        github
+            base_ref    -- only PR, target branch of PR
+            event <object>
+            event_name
+            head_ref    -- only PR, source branch of PR
+            ref         -- branch or tag that triggered workflow
+                `refs/heads/${branch_name}`
+                `refs/tags/${tag_name}`
+            sha         -- commit sha
+            token       -- for talking back to github, same as GITHUB_TOKEN
+        env
+            environment variables
+        job
+            info about the currently-running job
+            job.status  `success`, `failure`, `cancelled`
+        steps
+            steps.${stepid}.outputs <object>
+            steps.${stepid}.conclusion
+                `success`, `failure`, `cancelled`, `skipped`
+                can be different than `.outcome` if `continue-on-error`
+            steps.${stepid}.outcome
+                `success`, `failure`, `cancelled`, `skipped`
+        runner
+            os
+            temp        -- temporary dirctory, guaranteed to be empty at start of job
+            tool_cache  -- directory of preinstalled tools
+        secrets
+        strategy
+        matrix
+        needs
+            ${jobid}    -- what the current job depends on
+            ${jobid}.outputs <object>   -- output of depended-on job
+            ${jobid}.result
+                `success`, `failure`, `cancelled`, `skipped`
+
+
+COMMUNITY ACTIONS
+    https://github.com/actions/
+    actions/checkout@v2
+        with:
+            fetch-depth: 0      # fetch whole history
+        https://github.com/actions/checkout
+    actions/setup-node@v2
+        with:
+            node-version: '14'
+            registry-url: 'https://npm.pkg.github.com'
+        latest LTS
+        using private npmjs.com packages
+            - run: npm install --ignore-scripts
+              env:
+                NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    actions/labeler
+        label PRs based on globs
+        .github/labeler.yml
+        - use: actions/labeler@v1
+          with:
+            repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    actions/upload-artifacts@v2
+    actions/download-artifacts@v2
+    actions/cache@v2
+
+    https://github.com/marketplace/actions/release-please-action
+
+
+
+SHARING WORKFLOWS
+    https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
+    write access to the org's `.github` repo
+
+
+SHARING ACTIONS
+    https://docs.github.com/en/actions/creating-actions
+    https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
+        https://github.com/actions/toolkit
+
+
+WORKFLOW ARTIFACTS
+    https://docs.github.com/en/actions/guides/storing-workflow-data-as-artifacts
+    actions/upload-artifacts@v2
+    actions/download-artifacts@v2
+
+
+SECURITY
+    https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions?learn=getting_started
+
+
+

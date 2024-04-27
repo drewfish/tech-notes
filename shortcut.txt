@@ -1,0 +1,82 @@
+
+
+STANDARD SHORTCUT -- Derek Arnold (SC rep)
+    team
+        primary unit of organization
+        -> people:  users
+        -> work:  milestone, epic, story
+        -> process:  workflows, iterations
+    workflow
+        kanban or sprint
+        top level states:  unstarted, started, done
+    many:many workflow:team
+    story
+        smallest unit of work
+        (aka jira ticket)
+        can have tasks
+        can convert a story to an epic (its tasks become stories)
+    epic
+        collection of stories (suggested about 40)
+    milestone
+        recommended: time based, or initiative based
+    saved spaces
+        saved filter view
+        only one workflow, suggest using epics to cross workspaces
+    iterations
+        aka sprints
+    labels
+        added by anyone
+        can be filtered by
+    categories
+        milestones only
+    roadmap
+        for timeboxed things
+        gantt chart
+        can make chnages here
+    reporting
+        burndown, velocity, etc
+        labels have their own burndown charts too
+    power bar
+        command-space
+    status page
+        specific to workflow
+    api
+    roadmap
+        planned:  decisions, actionable notifications
+        working:  custom fields
+
+
+EMPLOYER SHORTCUT -- Eli
+    "Engineering" workflow
+    many teams
+    "More Spaces"
+    check out quick filter
+    org-wide
+        swimlanes
+            story points
+    descriptions take markdown
+    sub-tasks can be created to stories
+    relationships between stories
+    threaded comments
+    labels (wild west, alas)
+    can move between workflows, but will ask for state update
+    epic
+        is a collectin of stories
+        comments on epics themselves
+    milestone
+        Picnic is a good example (they do it well)
+    roadmap
+    iterations
+        convention:  {team-name} {number} {name}
+        normalized sprint numbers across company
+        encouraged:  future sprint
+    team page
+        most org-related, some not
+    projects
+        around a theme
+        keeps is a good example
+    reports
+    api
+        settings, api tokens
+
+

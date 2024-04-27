@@ -1,0 +1,104 @@
+
+
+COMMANDS
+    dot
+        hierarchical, directed
+    neato
+        spring model, smaller graphs
+    fdp
+        spring model
+    sfdp
+        multiscale version of fdp for larger graphs
+    twopi
+        radial layout
+    circo
+        circular layout
+
+
+DOT LANGUAGE
+    https://graphviz.org/doc/info/lang.html
+
+    graph:  [ strict ] (graph | digraph) [{ID}] '{' {stmt_list} '}'
+    stmt_list:      [ {stmt} [ ';' ] {stmt_list} ]
+    stmt:           {node_stmt}
+                    | {edge_stmt}
+                    | {attr_stmt}
+                    | {ID} '=' {ID}
+                    | {subgraph}
+    attr_stmt:      (graph | node | edge) {attr_list}
+    attr_list:      '[' [ {a_list} ] ']' [ {attr_list} ]
+    a_list:         {ID} '=' {ID} [ (';' | ',') ] [ {a_list} ]
+    edge_stmt:      ( {node_id} | {subgraph} ) {edgeRHS} [ {attr_list} ]
+    edgeRHS:        {edgeop} ( {node_id} | {subgraph} ) [ {edgeRHS} ]
+    node_stmt:      {node_id} [ {attr_list} ]
+    node_id:        {ID} [ {port} ]
+    port:           ':' {ID} [ ':' {compass_pt} ]
+                    | ':' {compass_pt}
+    subgraph:       [ subgraph [ {ID} ] ] '{' {stmt_list} '}'
+    compass_pt:     ( n | ne | e | se | s | sw | w | nw | c | _ )           # not keywords
+    edgeop:         ( '->' | '--' )
+    ID
+        any string of alnum, digit, _, not beginning with digit
+        any numeral
+        any double-quoted string, possible containing escape quotes
+            can span multiple lines by backslash-escaping end-of-line
+            can be concatenated using `+`
+        an HTML string (`<...>`)
+            special for labels
+    comments
+        /* foo */
+        // bar
+        ^# baz
+    subgraphs and clusters
+        nodes & edges which should be grouped together
+        context for setting attributes
+        cluster if name begines with `cluster`
+            nodes belonging to cluster are drawn together
+            entire cluster drawn within bounding rect
+    notes
+        `strict` means no duplicate edges between same src:dst pair
+            can be used to add more edge attributes
+        default attributes apply to appropriate items defined _later_ in the same group
+        subgraph receives attribute settings of parent graph
+        names of subgraphs and clusters share same namespace
+        assumed that clusters strict hierarchy
+        dot assumes utf8
+
+
+ATTRIBUTES
+    https://graphviz.org/doc/info/attrs.html
+    name=value pair
+    names are case-sensitive
+        values are often (but not always)
+    e.g.
+        node        `abc [fillcolor = red]`
+        edge        `abc -> def [arrowhead = diamond]`
+
+
+
+NODE SHAPES
+    https://graphviz.org/doc/info/shapes.html
+    geometry and style of all nodes affected by these node attributes
+        fixedsize fontname fontsize height label style width
+    TYPES
+        polygon-based
+        record-based
+            largely supersceded by HTML-link labels
+                instead of shape=record, use shape=none margin=0 and HTML-like labels
+        user-defined
+    synonyms
+        rect, rectangle, box
+        none, plaintext,
+            also plain, but width=0 height=0 margin=0, so size determined by label
+                goot for HTML-like labels
+        geometry of polygon-based shapes affected by atts regular, peripherals, orientation
+            also atts sides, skew, distortion if shape=polygon
+            shape=point is a little special
+    RECORDS
+        shape=record or shape=Mrecord
+        visually a box
+        rlabel:     {field} ( '|' {field} )*
+        field:      {fieldid} or '{' {rlabel} '}'
+        fieldid:    [ '<' {string} '>' ] [ {string} ]
+
+

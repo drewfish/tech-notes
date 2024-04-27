@@ -1,0 +1,3357 @@
+
+
+INSTALL VIA
+    apt-get -- 10.14-0ubuntu0.18.04.1
+    homebrew -- stable 12.4
+        brew install postgresql@11
+    aws RDS -- major version 12
+    aws RDS Aurora
+        single-master 9.6.18 10.13 11.8
+        global 10.13 11.8
+
+
+FEATURES
+    data types
+        primitives: integer, numeric, string, boolean
+        structured: date/time, array, range, uuid
+        document: json/jsonb, xml, key-value (hstore)
+        geometry: point, line, circle, polygon
+        customizations: composite, custom types
+    data integrity
+        UNIQUE, NOT NULL
+        primary keys
+        foreign keys
+        exclusion constraints
+        explicit lock, advisory locks
+    concurrency, performance
+        indexing: btree, multicolumn, expressions, partial
+        sophisticated query planner/optimizer, index-only scans, multicolumn statistics
+        transaction, nested transactions
+        multi-version concurrency control
+        parallelization of read queries and building btree indexes
+        table partitioning
+    reliability, disaster recovery
+        write-ahead logging
+        replication: async, sync, logical
+        point-in-time recovery, active standbys
+        tablespaces
+    security
+        authn: gssapi, sspi, ldap, scram-sha-256, certificate, more
+        robust acess-control system
+        column- and row-level security
+        multi-factor authn with certs
+    extensibility
+        stored functions and procedures
+        procedural languages: pl/pgsql, perl, python, more
+        sql/json path expressions (version>=12)
+        foreign data wrappers
+        more
+    i18n, text search
+        support for i18n charsets, eg ICU collations
+        case-insensitive and accent-insensitive collations
+        full-text search
+
+
+
+ONLINE DOC NOTES
+    https://www.postgresql.org/docs/11/index.html
+    int, smallint, real, double precision, char(N), varchar(N), date, time, timestamp, interval
+    quoted "identifier"
+    'string constant'  'string ''the'' constant'
+    E&'string constant' enables c-style escapes (\n \r \t \o \oo \ooo \xh \xhh \xhh \uxxxx \Uxxxxxxxx)
+    U&'string constant' enables \xxxx or \+xxxxxx unicode escape
+    $$foo$$ or $tag$foo bar baz$tag$ common quoting conventions
+    B'1001' or X'1FF' enable bit-string constants
+    casts:  type 'string'  'string'::type  CAST('string' as type)
+    special chars
+        $d (digit) represents positional parameters (functions or prepared statements)
+        () does usual
+        [] selects element of array
+        , separates elements of a list
+        ; terminates a command (unless within string constant or quoted identifier)
+        * all fields in a table row or composite value, or that aggregate function takes no explicit params
+        . used in numeric constants, or separate schema, table, and column names
+    -- comment to end-of-line
+    /*c-style comments /*can be*/ nested*/
+    value expressions
+        constant value
+        column reference
+            correlation.columnname
+        positional param reference
+            $number
+        subscripted expression
+            expression[subscript]  expression[lower_subscript:upper_subscript]
+            in general expression must be in parentheses, but can be omitted if column ref or positional param
+        field selection expression
+            expression.fieldname
+            in general expression must be in parentheses, but can be omitted if table ref or positional param
+            note: parens needed when extracting field from a column which is a composite type
+                (mytable.compositecol).somefield
+        operator invocation
+        function call
+        aggregate expression
+            https://www.postgresql.org/docs/11/sql-expressions.html#SYNTAX-AGGREGATES
+        window function call
+            https://www.postgresql.org/docs/11/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS
+        type cast
+            CAST(expression AS type)
+            expression::type
+            typename(expression)
+        collation expression
+            expression COLLATE collation
+        scalar subquery
+            standard SELECT query which returns exactly one row and one column
+        array constructor
+            ARRAY[elem,elem,elem,...]
+            ARRAY[elem,elem,elem]::type[] to cast
+            ARRAY[[a1,a2], [b1,b2]] must be rectangular
+            ARRAY[]::type[] for empty array (must have cast)
+            ARRAY(subquery) must return a single column
+            subscripts begin with one(1)
+        row constructor
+            ROW(expr,expr,expr,...)
+            keyword ROW is optional when more than one expression in the list
+            rowvalue.* expands to list of elements in row
+            is an anonymous record type, can be cast to another type
+        another value expression in parentheses
+            the order of evaluation of subexpressions is not defined
+            boolean shortcircuiting can happen, not order dependent
+            if order matters a CASE construct can be used
+    calling functions
+        named:  fn(name => expr, name=> expr)
+        named or mixed can't be used when calling an aggregate function
+    tables
+        list tables
+            \dt
+        show table description
+            \d {tabname}
+            \d+ {tabname}
+        each column has a type
+        table and column names are identifiers
+        type names are usually identifiers, with exceptions
+        {colname} {type} DEFAULT {expr}
+        CHECK constraint (table or column)
+            CHECK ({bool expr})
+            table constraint can reference several columns
+            constraint passes if expr evaluates to true or NULL
+            can be named
+        NOT NULL constraint
+            cannot be named
+        UNIQUE constraint (table or column)
+            two NULL values are never considered equal
+            table:  UNIQUE ({list of colnames})
+            can be named
+        primary key constraint (table or column)
+            a table can have at most one primary key
+            both UNIQUE and NOT NULL
+            table:  PRIMARY KEY ({list of colnames})
+        foreign key constraint (table or column)
+            types must match
+            {coldef} REFERENCES {table} ({colname})
+            {coldef} REFERENCES {table} -- if colname is the same in foreign table
+            table:  FOREIGN KEY ({list of colnames in referencing table}) REFERENCES {referenced table} ({list of colnames in referenced table})
+            ON DELETE {action}
+                NO ACTION -- raise an error (default)
+                RESTRICT -- prevents deletion of referenced row
+                CASCADE -- causes deletion of referencing row
+                SET NULL -- causes referencing col to be set to NULL
+                SET DEFAULT -- causes referencing col to be set to default value
+            ON UPDATE {action}
+                triggered when referenced col is updated
+                NO ACTION -- raise an error (default)
+                RESTRICT -- prevents update of referenced col
+                CASCADE -- causes updated of referencing col
+                SET NULL -- causes referencing col to be set to NULL
+                SET DEFAULT -- causes referencing col to be set to default value
+            foreign key not constrained if referencing col(s) are NULL
+                declare referencing columns NOT NULL if foreign key constraint must always apply
+                MATCH FULL addendum enforces that only if -all- cols are NULL
+            referenced cols must be part of PRIMARY KEY or UNIQUE constraints
+            good idea to have an index on referencing col(s) as well (to help delete and update processing)
+        exclusion constraint (column)
+            automatically causes an index to be created on col
+            https://www.postgresql.org/docs/11/sql-createtable.html#SQL-CREATETABLE-EXCLUDE
+            ... in practice used for GiST or SP-GiST
+        named constraints (check, unique, primary key, foreign key)
+            CONSTRAINT {name} ...
+        system columns
+            oid
+                if table created WITH OIDS
+                WITHOUT OIDS is the default
+                best practice is to use a sequence instead of relying on this
+            tableoid
+                OID of table containing the row
+                joined against pg_class.oid to obtain table name
+            ...more...
+    modifying tables
+        add columns
+            ALTER TABLE {tabname} ADD COLUMN {coldef}
+        remove columns
+            ALTER TABLE {tabname} DROP COLUMN {colname}
+            table constraints referencing the col are dropped too
+            foreign key constraints of referencing tables are -not- dropped
+                but can be with the CASCADE addendum
+        add constraints
+            mostly uses table constraint syntax
+            ALTER TABLE {tabname} ADD {constraintdef}
+            however adding NOT NULL is done a little differently
+                ALTER TABLE {tabname} ALTER COLUMN {colname} SET NOT NULL
+        remove constraints
+            mostly uses table constraint syntax
+            must know constraints name first
+                can be found by `\d {tabname}`
+            ALTER TABLE {tabname} DROP CONSTRAINT {constraintname}
+            foreign key constraints of referencing tables are -not- dropped
+                but can be with the CASCADE addendum
+            however dropping NOT NULL is done a little differently
+                ALTER TABLE {tabname} ALTER COLUMN {colname} DROP NOT NULL
+        change default values
+            ALTER TABLE {tabname} ALTER COLUMN {colname} SET DEFAULT {value}
+            ALTER TABLE {tabname} ALTER COLUMN {colname} DROP DEFAULT
+        change column types
+            ALTER TABLE {tabname} ALTER COLUMN {colname} TYPE {coldef without name}
+            does implicit conversion
+            USING(...) for more complex conversions
+        rename columns
+            ALTER TABLE {tabname} RENAME COLUMN {oldname} TO {newname}
+        rename tables
+            ALTER TABLE {oldname} RENAME TO {newname}
+    privileges
+        when an object is created it is assigned an owner
+            normally a role
+        be default, only owner (or superuser) can do anything with it
+        privilege types
+            SELECT
+            INSERT
+            UPDATE
+            DELETE
+            TRUNCATE
+            REFERENCES
+            TRIGGER
+            CREATE
+            CONNECT
+            TEMPORARY
+            EXECUTE
+            USAGE
+            ALL -- all of the above
+        https://www.postgresql.org/docs/11/sql-grant.html
+        right to modify or destroy object is always privilege of owner only
+        assign an new owner with ALTER
+        GRANT {privtype} ON {object} TO {role}
+        REVOKE {privtype} ON {object} FROM {role}
+        PUBLIC can be used to specify all roles in the system
+    row security policies
+        in addition to the table privilege system (see GRANT)
+        by default no policies
+        ALTER TABLE ... ENABLE ROW LEVEL SECURITY
+        operations that apply to whole table (TRUNCATE, REFERENCES) don't use row security
+        https://www.postgresql.org/docs/11/ddl-rowsecurity.html
+    schemas
+        a database contains one-or-more schemas
+        a schema contains:  tables, data types, functions, operators, and others
+        CREATE SCHEMA {name}
+        DROP SCHEMA {name}
+            CASCADE
+            AUTHORIZATION {username}
+        SHOW search_path
+        SET search_path TO {schemaname}
+    inheritance
+        https://www.postgresql.org/docs/11/ddl-inherit.html
+    table partitioning
+        https://www.postgresql.org/docs/11/ddl-partitioning.html
+    foreign data
+        https://www.postgresql.org/docs/11/ddl-foreign-data.html
+    other database objects
+        views
+        functions, proceedures, and operators
+        data types and domains
+        triggers and rewrite rules
+    dependency tracking
+        https://www.postgresql.org/docs/11/ddl-depend.html
+    inserting data
+        INSERT INTO {tabname} VALUES ({list of expr})
+        INSERT INTO {tabname} ({list of colnames}) VALUES ({list of expr})
+            expr are constants or scalar expressions
+        INSERT INTO {tabname} DEFAULT VALUES
+        INSERT INTO {tabname} ({list of colnames}) VALUES {list of rows}
+            (a, b, c), (d, e, f), ...
+        INSERT INTO {tabname} ({list of colnames}) SELECT ...
+    updating data
+        UPDATE {tabname} SET {list of assignments}
+        UPDATE {tabname} SET {list of assignments} WHERE ...
+    deleting data
+        DELETE FROM {tabname}
+        DELETE FROM {tabname} WHERE ...
+    returning data from modified rows
+        {INSERT,UPDATE,DELETE query} RETURNING *
+        {INSERT,UPDATE,DELETE query} RETURNING {list of colnames}
+        INSERT INTO {tabname} SELECT ... RETURNING ...
+        DELETE FROM {tabname} WHERE ... RETURNING *
+    queries
+        [WITH {with_queries}] SELECT {select_list} FROM {table_expression} [{sort_specification}]
+        {table_expression} := {table_reference}, {table_reference}, ...
+            ... WHERE ...
+            ... GROUP BY ...
+            ... HAVING ...
+        more-than-one comma-separated table is a cross-join
+        T1 {join_type} T2 [{join_condition}]
+        CROSS JOIN
+            for every combo of rows from T1 and T2
+            similar to T1 INNER JOIN T2 ON TRUE
+        T1 { [INNER] | { LEFT | RIGHT | FULL } [OUTER] } JOIN T2 ON boolean_expression
+        T1 { [INNER] | { LEFT | RIGHT | FULL } [OUTER] } JOIN T2 USING ( join column list )
+        T1 NATURAL { [INNER] | { LEFT | RIGHT | FULL } [OUTER] } JOIN T2
+        INNER JOIN
+            the default
+            for each row R1 of T1, the result has a row for each row in T2 that satisfies the join condition with R1
+        LEFT OUTER JOIN
+            first, an inner join is performed
+            then, for each row in T1 that does not satisfy the join condition with any row in T2, a joined row is added with NULL values in columns of T2
+            thus, the joined table always has at least one row for each row in T1
+        RIGHT OUTER JOIN
+            first, an inner join is performed
+            then, for each row in T2 that does not satisfy the join condition with any row in T1, a joined row is added with NULL values in columns of T1
+            this is the converse of a left join: the result table will always have a row for each row in T2
+        FULL OUTER JOIN
+            first, an inner join is performed
+            then, for each row in T1 that does not satisfy the join condition with any row in T2, a joined row is added with null values in columns of T2
+            also, for each row of T2 that does not satisfy the join condition with any row in T1, a joined row with null values in the columns of T1 is added
+        ON
+            same boolean expressions as WHERE
+        USING
+            generates equality comparison(s)
+            suppresses redundant column names
+        NATURAL
+            shorthand for USING with a list of colnames that appear in both tables
+            if no common colnames, same as cross join
+            considered a bit risky, since schema changes will affect SELECTs
+        FROM {tabname} AS {alias}
+        FROM {tabname} {alias}
+        FROM {tabname} [AS] {alias} ({col aliases})
+        FROM ({select query}) AS {alias}
+        FROM (VALUES {rows}) AS {alias}({col aliases})
+        table functions
+            produce a set of rows
+            used in the FROM clause
+            {function_call} [WITH ORDINALITY] [[AS] {alias}[({col aliases})]]
+            ROWS FROM( {function_call} [, ... ] ) [WITH ORDINALITY] [[AS] {alias} [({col aliases})]]
+            WITH ORDINALITY
+                adds column "ordinality bigint" index starts at 1
+            UNNEST( array_expression [, ... ] ) [WITH ORDINALITY] [[AS] {alias} [({col aliases})]]
+            {function_call} [AS] {alias} ({list of coldefs})
+            {function_call} AS [{alias}] ({list of coldefs})
+            ROWS FROM( {function_call} AS ({list of coldefs}), ...)
+        LATERAL subqueries
+            -- more obscure/advanced?
+        WHERE clause
+            WHERE {search_condition}
+            {search_condition} returns a boolean value
+        GROUP BY and HAVING
+            if a table is grouped, then columns not listed in GROUP BY cannot be references except in aggregate functions
+        GROUPING SETS, CUBE, and ROLLUP
+            GROUP BY GROUPING SETS ((brand), (size), ())
+            ROLLUP ( e1, e2, e3, ... ) means
+                GROUPING SETS (
+                    ( e1, e2, e3, ... ),
+                    ...
+                    ( e1, e2 ),
+                    ( e1 ),
+                    ( )
+                )
+            CUBE ( a, b, c ) means
+                GROUPING SETS (
+                    ( a, b, c ),
+                    ( a, b    ),
+                    ( a,    c ),
+                    ( a       ),
+                    (    b, c ),
+                    (    b    ),
+                    (       c ),
+                    (         )
+                )
+        window function processing
+            is done after any grouping, aggregation, or HAVING
+    select lists
+        SELECT * FROM ...
+        SELECT a, b, c FROM ...
+        SELECT {colname} AS {alias} FROM ...
+        AS is optional unless alias is a keyword
+        AS can be optional if alias is a (double-)quoted identifier
+        SELECT DISTINCT {select list}
+        SELECT DISTINCT ON ({list of exprs}) {select list}
+    combining queries
+        queries return same number of columns, with compatible column types
+        query1 UNION [ALL] query2
+            appends rows
+        query1 INTERSECT [ALL] query2
+            all rows that are in both results
+        query1 EXCEPT [ALL] query2
+            returns all rows in query1 but not in query2
+        eliminiates duplicate rows, unless ALL
+    sorting rows
+        ORDER BY sort_expr [ASC | DESC] [NULLS { FIRST | LAST }], ...
+        sort_expr
+            anything that would be valid in select_list
+            column alias
+            number of output column (base 1)
+        NULLS FIRST is default for DESC
+        NULLS LAST is default for ASC
+        ORDER BY can be applied to UNION, INTERESECT, or EXCEPT
+            but sort_expr can't be an expr
+    LIMIT and OFFSET
+        [ LIMIT { number | ALL } ] [ OFFSET number ]
+        offset is base zero(0)
+    VALUES list
+        provides a way to create a "constants table"
+        VALUES ( expr, ... ) [, ...]
+        list of rows must have same number of cols, and compatible types
+        by defaults assigns "column1", "column2", etc, column identifiers
+        VALUES ... AS {tabalias} ({list of colalias})
+        equivalent to SELECT select_list FROM table_expression
+    WITH queries
+        provides way to write auxiliary statements for use in a larger query
+        aka Common Table Expressions (CTE)
+        WITH { SELECT query, INSERT query, UPDATE query, DELETE query }
+        WITH {queryalias} AS SELECT ...
+            WITH RECURSIVE ...
+                -- more obscure/advanced?
+            evaluated only once per execution of the parent query
+        data modifying statements (INSERT, UPDATE, DELETE)
+            usually have a RETURNING clause, which forms the temporary table
+            data-modifying statements in WITH are executed exactly once, and always to completion
+            order of updates is undetermined
+            example
+                WITH moved_rows AS (
+                    DELETE FROM products WHERE ...
+                    RETURNING *
+                )
+                INSERT INTO products_log SELECT * FROM moved_rows
+            avoid writing WITH sub-statements that could affect the same rows changed by the main statement or a sibling sub-statement
+            tables used as the target of a data-modifying statement in WITH must not have a conditional rule, nor an ALSO rule, nor an INSTEAD rule that expands to multiple statements
+    data types
+        NAME                            ALIAS
+        bigint                          int8
+        bigserial                       serial8
+        bit[(n)]
+        bit varying [(n)]               varbit[(n)]
+        boolean
+        box
+        bytea
+        character[(n)]                  char[(n)]
+        character varying[(n)]          varchar[(n)]
+        cidr
+        circle
+        date
+        double precision                float8
+        inet
+        integer                         int,int4
+        interval[fields][(p)]
+        json
+        jsonb
+        line
+        lseg
+        macaddr
+        macaddr8
+        money
+        numeric[(p,s)]                  decimal[(p,s)]
+        path
+        pg_lsn
+        point
+        polygon
+        real                            float4
+        smallint                        int2
+        smallserial                     serial2
+        serial                          serial4
+        text
+        time[(p)] [without time zone]
+        time[(p)] with time zone        timetz
+        timestamp[(p)] [without time zone]
+        timestamp[(p)] with time zone   timestamptz
+        tsquery
+        tsvector
+        txid_snapshot
+        uuid
+        xml
+    numeric types
+        smallint            2bytes      -32768 to +32767
+        integer             4bytes      -2147483648 to +2147483647
+        bigint              8bytes      -9223372036854775808 to +9223372036854775807
+        decimal             varies      up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
+        numeric             varies      up to 131072 digits before the decimal point; up to 16383 digits after the decimal point
+        real                4bytes      6 decimal digits precision
+        double precision    8bytes      15 decimal digits precision
+        smallserial         2bytes      1 to 32767
+        serial              4bytes      1 to 2147483647
+        bigserial           8bytes      1 to 9223372036854775807
+        NUMERIC(precision, scale=0)
+            very large, monetary amounts
+            precision of a numeric is the total count of significant digits in the whole number, that is, the number of digits to both sides of the decimal point
+            scale of a numeric is the count of decimal digits in the fractional part, to the right of the decimal point
+            calculations on numeric values are very slow compared to integer types, or to floating-point types
+            special value 'NaN'
+            rounds away from zero
+        floating point
+            real, double precisions
+            special values 'Infinity' '-Infinity' 'NaN'
+        serial types
+            smallserial, serial, bigserial
+            not true types, merely notational convenience
+    monetary types
+        depends on lc_monetary setting
+    character types
+        character varying(n), varchar(n)    variable-length with limit
+        character(n), char(n)               fixed-length, blank padded
+        text                                variable unlimited length
+        n is number of characters (not bytes)
+        tip:  use text and varchar
+    binary data types
+        bytea
+        sequence of octets
+        similar to SQL BLOB
+        hex format '\xDEADBEAF'
+            whitespace allowed between digit pairs
+        escape format exists
+    date/time types
+        timestamp[(p)][ without time zone ] 8bytes  both date and time (no time zone)       4713 BC         294276 AD       1microsecond
+        timestamp[(p)] with time zone       8bytes  both date and time, with time zone      4713 BC         294276 AD       1microsecond
+        date                                4bytes  date (no time of day)                   4713 BC         5874897 AD      1day
+        time[(p)] [ without time zone ]     8bytes  time of day (no date)                   00:00:00        24:00:00        1microsecond
+        time[(p)] with time zone            12bytes time of day (no date), with time zone   00:00:00+1559   24:00:00-1559   1microsecond
+        interval[fields][(p)]               16bytes time interval                           -178000000years 178000000years  1microsecond
+        interval p refers to fractions of seconds (0-6)
+        interval fields
+            YEAR
+            MONTH
+            DAY
+            HOUR
+            MINUTE
+            SECOND
+            YEAR TO MONTH
+            DAY TO HOUR
+            DAY TO MINUTE
+            DAY TO SECOND
+            HOUR TO MINUTE
+            HOUR TO SECOND
+            MINUTE TO SECOND
+        special values
+            epoch       date,timestamp      1970-01-01 00:00:00+00 (Unix system time zero)
+            infinity    date,timestamp      later than all other time stamps
+            -infinity   date,timestamp      earlier than all other time stamps
+            now         date,time,timestamp current transaction's start time
+            today       date,timestamp      midnight (00:00) today
+            tomorrow    date,timestamp      midnight (00:00) tomorrow
+            yesterday   date,timestamp      midnight (00:00) yesterday
+            allballs    time                00:00:00.00 UTC
+        interval input
+            [@] quantity unit [quantity unit...] [direction]
+            P quantity unit [ quantity unit ...] [ T [ quantity unit ...]]
+            P [ years-months-days ] [ T hours:minutes:seconds ]
+    boolean types
+        "true"  TRUE true yes on 1
+        "false" FALSE false no off 0
+        "unknown" NULL
+    enumerated types
+        CREATE TYPE {name} AS ENUM ({list of string constants})
+        ordered by order in definition
+        labels are case-sensitive
+    geometric types
+        https://www.postgresql.org/docs/11/datatype-geometric.html
+    network address types
+        https://www.postgresql.org/docs/11/datatype-net-types.html
+    bit string types
+        https://www.postgresql.org/docs/11/datatype-bit.html
+    text search types
+        https://www.postgresql.org/docs/11/datatype-textsearch.html
+    uuid type
+        https://www.postgresql.org/docs/11/datatype-uuid.html
+    xml type
+        https://www.postgresql.org/docs/11/datatype-xml.html
+    json types
+        https://www.postgresql.org/docs/11/datatype-xml.html
+    arrays
+        columns of a table to be defined as variable-length multidimensional arrays
+        coldef:  {colname} {type}[]
+        '{ val1 delim val2 delim ... }'
+        e.g. '{{1,2,3},{4,5,6},{7,8,9}}'
+        INSERT INTO ... VALUES (..., {{"breakfast", "consulting"}, {"meeting", "lunch"}}')
+        INSERT INTO ... VALUES (..., ARRAY[['breakfast', 'consulting'], ['meeting', 'lunch']])
+        array subscript numbers are one(1) based
+        slices [lower:upper]
+        can omit either (or both) upper or lower bound
+        [:2] [2:] [:]
+        if any dimension is written as a slice, then all dimensions are interpretted as slices
+            ... so best to write all dimensions as slices
+        if subscript out of bounds, returns null (not an error)
+        UPDATE ... SET var[elem] = val
+        UPDATE ... SET var[slice] = array[...]
+        enlargement by assigning to elem past the end only works for one-dimensional arrays
+        concatenation operator ||
+        WHERE val = ANY (arrayfield), also ALL
+        FROM (SELECT field, generate_subscripts(field,1) AS x FROM ...) WHERE field[x]
+        overlap operator &&
+        WHERE arrayfield && ARRAY[val]
+    composite types
+        CREATE TYPE {typename} AS ({list of fieldname fieldtype pairs})
+        no constraints
+        literals
+            '({list of values})'
+            ROW({list of values})
+        SELECT ({tablespec}).{compfieldname} FROM ...
+        special field * means "all fields"
+        UPDATE t1 SET complex_col.r = (complex_col).r+1
+        INSERT INTO t1 (complex_col.r, complex_col.i) VALUES ...
+    range types
+        range of values of some subtype
+        subtype must have a "total order" so that values are before, within, or after the range
+        builtin
+            int4range
+            int8range
+            numrange
+            tsrange -- timestamp w/out tz
+            tstzrange -- timestamp w/tz
+            daterange
+        e.g. '[2010-01-01 14:30, 2010-01-01 15:30)'
+        start char [ means inclusive, ( means exclusive
+        end char ] means inclusive, ) means exclusive
+        containment operator @>
+        e.g. SELECT int4range(10, 20) @> 11
+        overlap oprator &&
+        intersection operator *
+        e.g. SELECT int4range(10, 20) * int4range(15, 25); -- [15,20)
+        upper and lower bounds can be omitted
+        e.g. (,3] [5,) (,)
+        empty range (written as empty string) contains no values
+        numrange(lower-bound, upper-bound, exclusivity)
+            if exclusivity is missing it defaults to '[)' (lower-inclusive, upper-exclusive)
+        descrete range
+            subtype has a well-defined "step"
+            has canonicalized form (often low-in,up-ex)
+        defining new ranges
+            CREATE TYPE floatrange AS RANGE (
+                subtype = float8,
+                subtype_diff = float8mi     -- for use with GiST or SP-GiST
+                -- canonical function for discrete types
+            )
+        constraints on ranges
+            UNIQUE is usually unsuitable for ranges
+            EXCLUDE constraint is often more appropriate
+    domain types
+        user-defined type based on another underlying type
+        underlying type can be any builtin or user-defined type, enum, composite, array, range, or another domain type
+        optionally can have a constraint
+    object identifier types
+        primarily for internal use
+        https://www.postgresql.org/docs/11/datatype-oid.html
+    pg_lsn type
+        primarily for internal use
+        https://www.postgresql.org/docs/11/datatype-pg-lsn.html
+    pseudo-types
+        any             indicates that function accepts any input data type
+        anyelement      indicates that function accepts any data type
+        anyarray        indicates that function accepts any array data type
+        anynonarray     indicates that function accepts any non-array data type
+        anyenum         indicates that function accepts any enum data type
+        anyrange        indicates that function accepts any range data type
+        cstring         indicates that function accepts or returns a null-terminated C string
+        internal        indicates that function accepts or returns a server-internal data type
+        language_handler        procedural language call handler is declared to return language_handler
+        fdw_handler     foreign-data wrapper handler is declared to return fdw_handler
+        index_am_handler        index access method handler is declared to return index_am_handler
+        tsm_handler     tablesample method handler is declared to return tsm_handler
+        record          identifies a function taking or returning an unspecified row type
+        trigger         trigger function is declared to return trigger
+        event_trigger   event trigger function is declared to return event_trigger
+        pg_ddl_command  identifies a representation of DDL commands that is available to event triggers
+        void            indicates that a function returns no value
+        unknown         identifies a not-yet-resolved type, e.g. of an undecorated string literal
+        opaque          obsolete type name that formerly served many of the above purposes
+    logical operators
+        AND OR NOT
+    comparison functions and operators
+        < > <= >=
+        <> or !=
+        a BETWEEN x AND y                   between inclusive, AKA a >= x AND a <= y
+        a NOT BETWEEN x AND y               not between inclusive, AKA a < x OR a > y
+        a BETWEEN SYMMETRIC x AND y         BETWEEN after sorting the comparison values
+        a NOT BETWEEN SYMMETRIC x AND y     NOT BETWEEN after sorting the comparison values
+        a IS DISTINCT FROM b                not equal, treating NULL like an ordinary value
+        a IS NOT DISTINCT FROM b            equal, treating NULL like an ordinary value
+        expression IS NULL                  is NULL
+        expression IS NOT NULL              is not NULL
+        expression ISNULL                   is NULL (nonstandard syntax)
+        expression NOTNULL                  is not NULL (nonstandard syntax)
+        boolean_expression IS TRUE          is true
+        boolean_expression IS NOT TRUE      is false or unknown
+        boolean_expression IS FALSE         is false
+        boolean_expression IS NOT FALSE     is true or unknown
+        boolean_expression IS UNKNOWN       is unknown
+        boolean_expression IS NOT UNKNOWN   is true or false
+        ordinary comparison operators yield NULL (signifying “unknown”), not true or false, when either input is NULL
+        num_nonnulls(VARIADIC "any")    returns the number of non-null arguments
+        num_nulls(VARIADIC "any")       returns the number of null arguments
+    date and time functions
+        current_timestamp -- microtime of transaction
+        statement_timestamp -- microtime of statement
+    math function and operators
+        + - * / % ^
+        |/  square root
+        ||/ cube root
+        !   factorial
+        !!  factorial, prefix
+        @   absolute value
+        & | # ~ << >>   bitwise AND OR XOR NOT shifts
+        FUNC                    RTYPE
+        abs(x)                  (same as input)     absolute value
+        cbrt(dp)                dp                  cube root
+        ceil(dp|numeric)        (same as input)     nearest integer greater than or equal to argument
+        ceiling(dp|numeric)     (same as input)     nearest integer greater than or equal to argument
+        degrees(dp)             dp                  radians to degrees
+        div(y numeric, x numeric)   numeric         integer quotient of y/x
+        exp(dp|numeric)         (same as input)     exponential
+        floor(dp|numeric)       (same as input)     nearest integer less than or equal to argument
+        ln(dp|numeric)          (same as input)     natural logarithm
+        log(dp|numeric)         (same as input)     base 10 logarithm
+        log(b numeric, x numeric)   numeric         logarithm to base b
+        mod(y, x)               (same as input)     remainder of y/x
+        pi()                    dp                  “π” constant
+        power(a dp, b dp)       dp                  a raised to the power of b
+        power(a numeric, b numeric) numeric         a raised to the power of b
+        radians(dp)             dp                  degrees to radians
+        round(dp|numeric)       (same as input)     round to nearest integer
+        round(v numeric, s int) numeric             round to s decimal places
+        scale(numeric)          integer             scale of the argument (the number of decimal digits in the fractional part)
+        sign(dp|numeric)        (same as input)     sign of the argument (-1, 0, +1)
+        sqrt(dp|numeric)        (same as input)     square root
+        trunc(dp|numeric)       (same as input)     truncate toward zero
+        trunc(v numeric, s int) numeric             truncate to s decimal places
+        width_bucket(val dp, rlo dp, rhi dp, count int)                 int
+            return the bucket number to which val would be assigned in a histogram having count equal-width buckets spanning the range rlo to rhi
+            returns 0 or count+1 for an input outside the range
+            width_bucket(5.35, 0.024, 10.06, 5) returns 3
+        width_bucket(val numeric, rlo numeric, rhi numeric, count int)  int
+            return the bucket number to which val would be assigned in a histogram having count equal-width buckets spanning the range rlo to rhi
+            returns 0 or count+1 for an input outside the range
+            width_bucket(5.35, 0.024, 10.06, 5) returns 3
+        width_bucket(val anyelement, thresholds anyarray)               int
+            return the bucket number to which val would be assigned given an array listing the lower bounds of the buckets
+            returns 0 for an input less than the first lower bound
+            the thresholds array must be sorted, smallest first, or unexpected results will be obtained
+            width_bucket(now(), array['yesterday', 'today', 'tomorrow']::timestamptz[]) returns 2
+        random()    dp      random value in the range 0.0 <= x < 1.0
+        setseed(dp) void    set seed for subsequent random() calls (value between -1.0 and 1.0, inclusive)
+        RADIANS     DEGREES
+        acos(x)     acosd(x)    inverse cosine
+        asin(x)     asind(x)    inverse sine
+        atan(x)     atand(x)    inverse tangent
+        atan2(y,x)  atan2d(y,x) inverse tangent of y/x
+        cos(x)      cosd(x)     cosine
+        cot(x)      cotd(x)     cotangent
+        sin(x)      sind(x)     sine
+        tan(x)      tand(x)     tangent
+    string functions and operators
+        text||text  non-text||text  text||non-text      concatenation
+        bit_length(text) int
+        char_length(text) int
+        character_length(text) int
+        lower(text) text
+        octet_length(text) int
+        overlay({src} placing {rep} from {x} to {y}) text       substring replacement
+        position({substr} in {text}) int
+        substring({src} [from {start}] [for {len}]) text
+        substring({src} from {POSIX-regexp}) text
+        substring({src} from {SQL-regexp} for {escape}) text
+        trim([leading | trailing | both] [{chars}] from {src}) text
+        trim([leading | trailing | both] [from] {src} [, {chars}]) text
+        upper(text) text
+        ascii(text) int                             ascii code of first character
+        btrim({src} text [, {chars} text]) text     trim both sides using chars (default space)
+        chr(int) text       character for code
+        concat({a} any[, {b} any[, ...]])
+        concat_ws({sep} text, {a} any[, {b} any[, ...]])
+        convert({src} bytea, {src-enc} name, {dst-enc} name) bytea
+        convert_from({src} bytea, {src-enc} name) text
+        convert_to({src} text, {dst-enc} name) bytea
+        decode({src} text, {format} text) bytea
+        encode({data} bytea, {format} text) text    base64, hex, escape
+        initcap(text) text                          uppercase first char of each word, lowercases rest
+        left({src} text, {len} int) text            negative {len} relative to end of string
+        length(text) int                            number of chars
+        length(bytea, {enc} name) int               number of chars, given encoding
+        lpad(text, {len} int[, {fill} text}) text   if longer then truncated on right/end
+        ltrim(text[, {chars} text]) text
+        md5(text) text                              results in hexadecimal
+        parse_ident(text[, {strict} boolean DEFAULT true) text[]    splits into array of identifiers
+        pg_client_encoding() name
+        quote_ident(text) text
+        quote_literal(text) text                returns NULL if input is NULL
+        quote_literal(anyelement) text          returns NULL if input is NULL
+        quote_nullable(text) text               returns 'NULL' if input is NULL
+        quote_nullable(anyelement) text         returns 'NULL' if input is NULL
+        regexp_match(text, {pat} text[, {flags} text]) text[]               returns captures of first match [POSIX-regexp]
+        regexp_matches(text, {pat} text[, {flags} text]) setof text[]       returns captures of all matches [POSIX-regexp]
+        regexp_replace(text, {pat} text, {rep} text[, {flags} text]) text               [POSIX-regexp]
+        regexp_split_to_array(text, {posix-delim} text[, {flags} text]) text[]          [POSIX-regexp]
+        regexp_split_to_table(text, {posix-delim} text[, {flags} text]) setof text      [POSIX-regexp]
+        repeat(text, int) text
+        replace(text, {from} text, {to} text) text
+        reverse(text) text)
+        right(text, {len} int) text                 negative {len} relative to beginning of str
+        rpad(text, {len} int[, {fill} text]) text   if longer then truncated right/end
+        rtrim(text[, {chars} text]) text
+        split_part(text, {delim} text, {field} int) text    count from one
+        strpos(text, text) int
+        substr(text, {from} text[, {count} int]) text
+        starts_with(text, {prefix} text) bool
+        to_ascii({src} text[, {src-enc} text]) text
+        to_hex({number} int|bigint) text
+        translate({src} text, {from} text, {to} text) text
+        format({formatstr} text[, {formatarg any[, ...]]) text
+            %[position][flags][width]type
+            position
+                {n}$    use {n}th argument, 1 means first arg after formatstr
+                $       use next argument
+            flags
+                -       left-justified
+            width
+                specified minimum number of chars
+                padded with spaces
+                {n}     positive int
+                *       use next argument for width, width arg consumed before value arg
+                *{n}$   use {n}th argument for width, 1 means first arg after formatstr
+                        if width arg is negative then value is left-justified
+            type
+                s       simple string, NULL treated as empty string
+                I       SQL identifier, quoted as necessary, NULL is an error (similar to quote_ident)
+                L       SQL literal, NULL shown as 'NULL' (similar to quote_nullable)
+            %% show literal % character
+            can mix numeric and use-next positions, use-next always uses the next after last used
+    binary string functions and operators
+        bytea || bytea      concatenation
+        octet_length(bytea) int
+        overlay({src} placing {rep} from {idx} [for {len}) bytea
+        position({substr} in {str}) int
+        substr({src} [from {idx}] [for {len}]) bytea
+        trim([both] {bytes} from {src}) bytea
+        btrim({src} bytea, {bytes} bytea) bytea
+        decode({src} text, {format} text) bytea
+        encode({src} bytea, {format} text) text
+        get_bit({src}, {offset}) int            first bit is index 0
+        get_byte({src}, {offset}) int           first byte is index 0
+        length({src}) int
+        md5({src}) text
+        set_bit({src}, {offset}, {newval}) bytea                first bit is index 0
+        set_byte({src}, {offset}, {newval} int) bytea           first byte is index 0
+        sha224(bytea) bytea
+        sha384(bytea) bytea
+        sha512(bytea) bytea
+        encode(sha256('abc'),'hex')
+    bit string functions and operators
+        ||      concatenation
+        &       bitwise AND
+        |       bitwise OR
+        #       bitwise XOR
+        ~       bitwise NOT
+        <<      bitwise shift left
+        >>      bitwise shift right
+        length() bit_length() octet_length() position() substring() overlay()
+        get_bit() set_bit()
+        casts
+            44::bit(10)                 0000101100
+            44::bit(3)                  100
+            cast(-44 as bit(12))        111111010100
+            '1110'::bit(4)::integer     14
+    pattern matching
+        LIKE
+            {string} LIKE {pattern} [ESCAPE {escape-char}]
+            {string} NOT LIKE {pattern} [ESCAPE {escape-char}]
+            matches entire string, so without percent or underscore acts like equality operator
+            _   matches any one character
+            %   matches sequence of zero-or-more characers
+            escape character defaults to backslash
+            ILIKE does case-insensitive matches
+            operator ~~ is same as LIKE
+            operator ~~* is same as ILIKE
+            operator !~~ is same as NOT LIKE
+            operator !~~* is same as NOT ILIKE
+        SIMILAR TO
+            {string} SIMILAR TO {pattern} [ESCAPE {escape-char}]
+            {string} NOT SIMILAR TO {pattern} [ESCAPE {escape-char}]
+            matches entire string, so without metachars acts like equality operator
+            _       matches any one character
+            %       matches sequence of zero-or-more characers
+            |       alternation
+            *       repetition of previous item zero-or-more times
+            +       repetition of previous item one-or-more times
+            ?       repetition of previous item zero-or-one times
+            {m}     repetition of previous item exactly m times
+            {m,}    repetition of previous item exactly m-or-more times
+            {m,n}   repetition of previous item exactly m-to-n times
+            (...)   group items into single logical item
+            [...]   character class
+            .       !!NOT A METACHAR!!
+            escape character defaults to backslash
+            substring() with three parameters uses this kind of regexp
+                pattern between escape-doublequotes specifies what to return
+        POSIX regexps
+            operators
+                ~       match, case sensitive
+                ~*      match, case insensitive
+                !~      not match, case sensitive
+                !~*     not match, case insensitive
+            matches anywhere in the string, not necessarily only whole string
+            substring({src} from {pat}) text
+                returns NULL if no match
+                if {pat} contains capturing parentheses, returns portion of {src} that matches first capture
+                otherwise, returns portion of {src} that matches {pat}
+            regexp_replace(text, {pat} text, {rep} text[, {flags} text]) text
+                if no match, {src} is returned unchanged
+                {rep}
+                    \{n}    captures 1 through 9
+                    \&      string that matches the whole pattern
+                    \\      backslash
+            regexp_match(text, {pat} text[, {flags} text]) text[]
+                returns NULL if no match
+                returns text array of captures
+                if no capturing parentheses, returns single-element array of substring matching whole {pat}
+            regexp_matches(text, {pat} text[, {flags} text]) setof text[]
+                if no match, returns no rows
+                if match and no g flag, returns one row containing captures of first match
+                otherwise, returns one row for each match, the row contains the captures
+            regexp_split_to_table({src} text, {posix-delim} text[, {flags} text]) setof text
+                uses posix regexp as delimiter
+                if no match, returns a single row containing {src}
+                no special treatment of captures from delim matches -- they aren't retained anywhere
+                ignores zero-length matches at the beginning and end of {src}, or immediately after previous match
+            regexp_split_to_array({src} text, {posix-delim} text[, {flags} text]) text[]
+                similar to regexp_split_to_table
+            implementation details
+                BRE := basic regexp
+                ERE := extended regexp
+                ARE := features beyond those defined in POSIX, almost exact superset of ERE
+                one or more branches, separated by |
+                branch is zero-or-more quantified atoms or constraints
+                    matches each atom/constraint in order
+                    empty branch matches the empty string
+                quantified atom is atom possibly followed by a quantifier
+                    without quantifier, matches single atom
+                    with quantifier, matches some number of atoms
+                atoms
+                    (re)        matches a match for re, captures match
+                    (?:re)      matches a match for re, doesn't capture
+                    .           matches a single character
+                    [chars]     matches any one of the chars [bracket expression]
+                    \k          (k := non-alphanumeric character) matches the ordinary character, eg \\ matches backslash
+                    \c          (c := alphanumeric) is an escape
+                    {           when followed by a character other than digit, matches left bracket
+                                when followed by digit, beginning of a bound (quantifier)
+                    x           (x := some other character) matches character
+                quantifiers
+                    *           a sequence of zero-or-more matches of atom
+                    +           a sequence of one-or-more matches of atom
+                    ?           a sequence of zero-or-one matches of atom
+                    {m}         a sequence of exactly m matches of atom
+                    {m,}        a sequence of at least m matches of atom
+                    {m,n}       a sequence of m-to-n matches of atom
+                    use ? suffix to make quantifier non-greedy [ARE]
+                    {...} are known as bounds, m and n are unsigned decimal ints 0-255
+                    quantifier cannot follow another quantifier
+                    quantifier cannot begin a RE or follow ^ or |
+                constraint matches an empty string, but when specific conditions are met
+                    can be used where an atom could be used, except cannot be followed by a quantifier
+                constraints
+                    ^           matches beginning of string
+                    $           matches end of string
+                    (?=re)      positive lookahead, matches at any point where a substring matching re begins [ARE]
+                    (?!re)      negative lookahead, matches at any point where no substring matching re begins [ARE]
+                    (?<=re)     positive lookbehind, matches at any point where a substring matching re ends [ARE]
+                    (?<!re)     negative lookbehind, matches at any point where no substring matching re ends [ARE]
+                    lookahead and lookbehind constraints
+                        cannot contain back references
+                        all parentheses within are considered non-capturing
+                bracket expressions
+                    list of characters enclosed in []
+                    normally, matches any single character from list
+                    if list begins with ^, matches nay single character NOT in list
+                    if two chars in list are separated by -, shorthand for full range (inclusive) of chars between
+                    to include literal ], make it first char (after ^ if used)
+                    to include literal -, make it first or last char, or second endpoint of a range
+                    backslash is not special in BRE or ERE, introduces escape in ARE
+                    collating element enclosed in [. and .]
+                        char, multi-char sequence that collates as a single char, collating sequence name
+                        sequence of chars treated as the same char
+                    collating element enclosed in [= and =]
+                        equivalence class
+                        sequence of chars of all equivalent collating elements
+                        cannot be used as an endpoint for a range
+                    character class enclosed in [: and :]
+                        named character classes
+                        from ctype:  alnum alpha blank cntrl digit graph lower print punct space upper xdigit
+                        locale can provide other
+                        cannot be used as an endpoint for a range
+                    [[:<:]] and [[:>:]]
+                        empty strings at beginnig and end of a word
+                        word char is alnum or underscore
+                escape characters [ARE]
+                    begins with \ followed by alphanum chars
+                    [ARE] error if not valid escape
+                    [ERE] backslash merely escapes next char outside bracket expressions
+                    character entry
+                        \a      alert (bell) character
+                        \b      backspace
+                        \B      synonym for backslash
+                        \cX     (X := any char) low-order 5 bits same as X, other bits zero
+                        \e      escape
+                        \f      form feed
+                        \n      newline
+                        \r      carriage return
+                        \t      horizontal tab
+                        \uWXYZ  (WXYZ := four hex digits) hex value
+                                    outside 7bit range, meaning depends on encoding
+                        \USTUVWXYZ  (STUVWXYZ := eight hex digits) hex value
+                                    outside 7bit range, meaning depends on encoding
+                        \v      vertical tab
+                        \xHHH   (HHH := any number of hex digits) hex value
+                        \0      null byte
+                        \XY     (XY := exactly two octal digits and not a back reference) octal value
+                        \XYZ    (XYZ := exactly three octal digits and not a back reference) octal value
+                    class shorthand
+                        \d      [[:digit:]]
+                        \s      [[:space:]]
+                        \w      [[:alnum:]_]
+                        \D      [^[:digit:]]
+                        \S      [^[:space:]]
+                        \W      [^[:alnum:]_]
+                        non-negatives can be used within bracket expressions
+                    constraint
+                        \A      matches only at beginning of string
+                        \m      matches only at beginning of word
+                        \M      matches only at end of word
+                        \y      matches only at beginning or end of word
+                        \Y      matches only at point that is not beginning or end of word
+                        \Z      matches only at end of string
+                        these are illegal within bracket expressions
+                    backreference
+                        \n, n is positive integer of previous capture
+                metasyntax extensions [ARE]
+                    if begins with ***: rest of RE is taken as ARE
+                    if begins with ***= rest of RE is taken as string literal
+                    (?xyz) (xyz := sequence of alpha) embedded options, see flags below
+                        can only appear at the start of an ARE
+                        override details (case-sensitiviy, etc) or flags to an operator or function
+                        take effect after the closing paren
+                    tight syntax
+                        all chars are significant
+                    expanded syntax
+                        whitespace chars are ignored
+                        octothorp introduces a comment to end of line
+                        exceptions
+                            whitespace or octothorp preceeded by backslash is retained
+                            whitespace or octothorp within brack expression is retained
+                            whitespace or comment cannot appear within multi-char RE symbols
+                    (?#ttt) is a comment, outside of bracket expression (note: use expanded syntax instead)
+            flags [ARE]
+                b       rest of RE is a BRE
+                c       case sensitive matching
+                e       rest of RE is an ERE
+                g       do all replacements, not just first
+                i       case insensitive matching
+                m       historical synonym for n
+                n       newline sensitive matching
+                            . and brack expressions using ^ never match newline
+                            ^ and $ ALSO match empty string after and before newline
+                            ^ and $ match begining and end of string
+                p       partial newline sensitive matching
+                            . and brack expressions using ^ never match newline
+                            ^ and $ ONLY match begining and end of string
+                q       rest of RE is literal, all ordinary characters
+                s       non newline sensitive matching (default)
+                            . and brack expressions using ^ can match newline
+                            ^ and $ ONLY match begining and end of string
+                t       tight syntax (default)
+                w       inverse partial newline sensitive ("weird") matching
+                            . and brack expressions using ^ match newline
+                            ^ and $ ALSO match empty string after and before newline
+                            ^ and $ match begining and end of string
+                            (not considered a useful mode, provided for symmetry)
+                x       expanded syntax
+            greediness
+                most atoms, and all constriants, have no greediness
+                adding parens doesn't change greediness
+                a quantified atom with fixed-repetition quantifier ({m} or {m}?) has the same greediness as the atom
+                a quantified atom with normal quantifier is greedy
+                a quantified atom with non-greedy quantifier is non-greedy
+                a branch has the same greediness as the first quantified atom that has a greediness attribute
+                a RE consisting of two-or-more branches connected by | is always greedy
+                {1,1} can force greedy, {1,1}? can force non-greedy
+            basic regular expressions [BRE]
+                | + ? are ordinary chars
+                delimters for bounds are \{ and \}
+                { and } are ordinary chars
+                parens for nested subexps are \( and \)
+                ( and ) are ordinary chars
+                ^ is ordinary char except at beginning of RE or beginning of parenthesized subexp
+                $ is ordinary char except at end of RE or end of parenthesized subexp
+                * is ordinary char if at beginning of RE or beginning of parenthesized subexp
+                single-digit back references are available
+                \< and \> are word boundaries
+                no other escapes are available
+    data type formatting functions
+        https://www.postgresql.org/docs/11/functions-formatting.html
+    date/time functions and operators
+        https://www.postgresql.org/docs/11/functions-datetime.html
+    enum functions
+         for examples:  CREATE TYPE rainbow AS ENUM ('red', 'orange', 'yellow', 'green', 'blue', 'purple');
+         enum_first(anyenum)
+            returns the first value of the input enum type
+            example:  enum_first(null::rainbow) => red
+         enum_last(anyenum)
+            returns the last value of the input enum type
+            example:  enum_last(null::rainbow) => purple
+         enum_range(anyenum)
+            returns all values of the input enum type in an ordered array
+            example:  enum_range(null::rainbow) => {red,orange,yellow,green,blue,purple}
+         enum_range(anyenum, anyenum)
+            returns the range between the two given enum values, as an ordered array
+            the values must be from the same enum type
+            if the first parameter is null, the result will start with the first value of the enum type
+            if the second parameter is null, the result will end with the last value of the enum type
+            example:  enum_range('orange'::rainbow, 'green'::rainbow) => {orange,yellow,green}
+            example:  enum_range(NULL, 'green'::rainbow) => {red,orange,yellow,green}
+            example:  enum_range('orange'::rainbow, NULL) => {orange,yellow,green,blue,purple}
+    geometric functions and operators
+        https://www.postgresql.org/docs/11/functions-geometry.html
+    network address functions and operators
+        https://www.postgresql.org/docs/11/functions-net.html
+    text search functions and operators
+        https://www.postgresql.org/docs/11/functions-textsearch.html
+    xml functions
+        https://www.postgresql.org/docs/11/functions-xml.html
+    json functions and operators
+        https://www.postgresql.org/docs/11/functions-json.html
+    sequence functions
+        single-row tables created with CREATE SEQUENCE
+        currval(regclass)                   bigint  Return value most recently obtained with nextval for specified sequence
+        lastval()                           bigint  Return value most recently obtained with nextval for any sequence
+        nextval(regclass)                   bigint  Advance sequence and return new value
+        setval(regclass, bigint)            bigint  Set sequence's current value
+        setval(regclass, bigint, boolean)   bigint  Set sequence's current value and is_called flag
+    conditional expressions
+        CASE
+            CASE WHEN {condition} THEN {result} [WHEN ...] [ELSE {result}] END
+            used as expr
+            {condition} returns a boolean result
+            if no condition matches and no ELSE, result is NULL
+            data types of all results must be convertible to a single output type
+            CASE {expr} WHEN {value} THEN {result} [WHEN ...] [ELSE {result}] END
+            does not evaluate a subexpression if it's not needed
+        COALESCE
+            COALESCE({value}[, ...])
+            returns the first argument that isn't NULL
+        NULLIF
+            NULLIF({val1}, {val2})
+            returns a NULL value if val1 equals val2
+        GREATEST and LEAST
+            GREATEST({value}[, ...])
+            LEAST({value}[, ...])
+            exprs must be convertible to a common data type, which is return type
+            result is NULL only if all are NULL
+    array operators
+        =   equal                               ARRAY[1.1,2.1,3.1]::int[] = ARRAY[1,2,3]    => t
+        <>  not equal                           ARRAY[1,2,3] <> ARRAY[1,2,4]    => t
+        <   less than                           ARRAY[1,2,3] < ARRAY[1,2,4]     => t
+        >   greater than                        ARRAY[1,4,3] > ARRAY[1,2,4]     => t
+        <=  less than or equal                  ARRAY[1,2,3] <= ARRAY[1,2,3]    => t
+        >=  greater than or equal               ARRAY[1,4,3] >= ARRAY[1,4,3]    => t
+        @>  contains                            ARRAY[1,4,3] @> ARRAY[3,1,3]    => t
+        <@  is contained by                     ARRAY[2,2,7] <@ ARRAY[1,7,4,2,6]    => t
+        &&  overlap (have elements in common)   ARRAY[1,4,3] && ARRAY[2,1]      => t
+        ||  array-to-array concatenation        ARRAY[1,2,3] || ARRAY[4,5,6]    => {1,2,3,4,5,6}
+        ||  array-to-array concatenation        ARRAY[1,2,3] || ARRAY[[4,5,6],[7,8,9]]  => {{1,2,3},{4,5,6},{7,8,9}}
+        ||  element-to-array concatenation      3 || ARRAY[4,5,6]   => {3,4,5,6}
+        ||  array-to-element concatenation      ARRAY[4,5,6] || 7   => {4,5,6,7}
+    array functions
+        array_append(anyarray, anyelement)  anyarray
+            append an element to the end of an array
+        array_cat(anyarray, anyarray)   anyarray
+            concatenate two arrays
+        array_ndims(anyarray)   int
+            returns the number of dimensions of the array
+        array_dims(anyarray)    text
+            returns a text representation of array's dimensions
+        array_fill(anyelement, int[] [, int[]])     anyarray
+            returns an array initialized with supplied value and dimensions, optionally with lower bounds other than 1
+        array_length(anyarray, int)     int
+            returns the length of the requested array dimension
+        array_lower(anyarray, int)  int
+            returns lower bound of the requested array dimension
+        array_position(anyarray, anyelement [, int])    int
+            returns the subscript of the first occurrence of the second argument in the array,
+            returns NULL if value isn't found
+            starting at the element indicated by the third argument or at the first element (array must be one-dimensional)
+            searched using IS NOT DISTINCT FROM
+        array_positions(anyarray, anyelement)   int[]
+            returns an array of subscripts of all occurrences of the second argument in the array
+            returns NULL if the array is NULL
+            returns an empty array if value is not found
+            given as first argument (array must be one-dimensional)
+            searched using IS NOT DISTINCT FROM
+        array_prepend(anyelement, anyarray)     anyarray
+            append an element to the beginning of an array
+        array_remove(anyarray, anyelement)  anyarray
+            remove all elements equal to the given value from the array (array must be one-dimensional)
+        array_replace(anyarray, {oldval} anyelement, {newval} anyelement)     anyarray
+            replace each array element equal to the given value with a new value
+        array_to_string(anyarray, {delim} text [, {nullstr} text])    text
+            concatenates array elements using supplied delimiter and optional null string
+            if nullstr is omitted or NULL, NULL elements are skipped
+        array_upper(anyarray, int)  int
+            returns upper bound of the requested array dimension
+        cardinality(anyarray)   int
+            returns the total number of elements in the array, or 0 if the array is empty
+        string_to_array(text, {delim} text [, {nullstr} text])    text[]
+            splits string into array elements using supplied delimiter and optional null string
+            if delimiter is NULL, every char is a separate element in the resulting array
+            if delimiter is an empty string, the result array contains the input string as the single element
+            if the nullstr is omitted or NULL, none of the substrings will be replaced by NULL
+        unnest(anyarray)    setof anyelement
+            expand an array to a set of rows
+        unnest(anyarray, anyarray [, ...])  setof anyelement, anyelement [, ...]
+            expand multiple arrays (possibly of different types) to a set of rows
+            this is only allowed in the FROM clause
+    range operators
+        =   equal                       int4range(1,5) = '[1,4]'::int4range     t
+        <>  not equal                   numrange(1.1,2.2) <> numrange(1.1,2.3)  t
+        <   less than                   int4range(1,10) < int4range(2,3)    t
+        >   greater than                int4range(1,10) > int4range(1,5)    t
+        <=  less than or equal          numrange(1.1,2.2) <= numrange(1.1,2.2)  t
+        >=  greater than or equal       numrange(1.1,2.2) >= numrange(1.1,2.0)  t
+        @>  contains range              int4range(2,4) @> int4range(2,3)    t
+        @>  contains element            '[2011-01-01,2011-03-01)'::tsrange @> '2011-01-10'::timestamp   t
+        <@  range is contained by       int4range(2,4) <@ int4range(1,7)    t
+        <@  element is contained by     42 <@ int4range(1,7)    f
+        &&  overlap (points in common)  int8range(3,7) && int8range(4,12)   t
+        <<  strictly left of            int8range(1,10) << int8range(100,110)   t
+        >>  strictly right of           int8range(50,60) >> int8range(20,30)    t
+        &<  does not extend to the right of     int8range(1,20) &< int8range(18,20)     t
+        &>  does not extend to the left of      int8range(7,20) &> int8range(5,10)  t
+        -|- is adjacent to              numrange(1.1,2.2) -|- numrange(2.2,3.3)     t
+        +   union                       numrange(5,15) + numrange(10,20)    [5,20)
+        *   intersection                int8range(5,15) * int8range(10,20)  [10,15)
+        -   difference                  int8range(5,15) - int8range(10,20)  [5,10)
+    range functions
+        lower(anyrange)     range's element type    lower bound of range
+        upper(anyrange)     range's element type    upper bound of range
+        isempty(anyrange)   boolean                 is the range empty?
+        lower_inc(anyrange)     boolean             is the lower bound inclusive?
+        upper_inc(anyrange)     boolean             is the upper bound inclusive?
+        lower_inf(anyrange)     boolean             is the lower bound infinite?
+        upper_inf(anyrange)     boolean             is the upper bound infinite?
+        range_merge(anyrange, anyrange) anyrange    the smallest range which includes both of the given ranges
+    aggregate functions
+        compute a single result value from a set of input values
+        array_agg(expr)
+        avg(expr)
+        bit_and(expr)
+        bit_or(expr)
+        bool_and(expr)
+        bool_or(expr)
+        count(*)
+        count(expr) -- number of rows which are not NULL
+            COUNT(CASE WHEN {cond} THEN 1 END)
+            COUNT(*) FILTER (WHERE {cond})
+        every(expr)
+        json_agg(expr)
+        jsonb_agg(expr)
+        json_object_agg(name, value)
+        jsonb_object_agg(name, value)
+        max(expr)
+        min(expr)
+        string_agg(expr, delim)
+        sum(expr)
+        xmlagg(expr)
+        corr(Y,X)
+        covar_pop(Y,X)
+        covar_samp(Y,X)
+        regr_avgx(Y,X)
+        regr_avgy(Y,X)
+        regr_count(Y,X)
+        regr_intercept(Y,X)
+        regr_r2(Y,X)
+        regr_slope(Y,X)
+        regr_sxx(Y,X)
+        regr_sxy(Y,X)
+        regr_syy(Y,X)
+        stddev(expr)
+        stddev_pop(expr)
+        stddev_samp(expr)
+        variance(expr)
+        var_pop(expr)
+        var_samp(expr)
+        ordered-set agg functions
+            https://www.postgresql.org/docs/11/functions-aggregate.html
+        hypothetical-set agg functions
+            https://www.postgresql.org/docs/11/functions-aggregate.html
+        grouping operations
+            https://www.postgresql.org/docs/11/functions-aggregate.html
+    window functions
+        https://www.postgresql.org/docs/11/functions-window.html
+    subquery functions
+        row_ctor := ROW({expr}*)
+            subquery must return exactly as many cols as exprs in row_ctor
+        subquery can refer to variables from surrounding query, which act as constants
+        EXISTS ({subquery})
+            returns TRUE if at least one row is returned from subquery
+            output list of subquery is normally unimportant
+            convention:  EXISTS(SELECT 1 FROM ...)
+        {expr} IN ({subquery})
+            subquery returns exactly one column
+            returns NULL if expr is NULL or subquery result has at least one NULL in the column and no equal value
+        {row_ctor} IN ({subquery})
+            returns TRUE if any equal row is found
+            two rows are equal if all members are non-null and equal
+            two rows are unequal if any members are non-null or unequal
+            otherwise returns NULL for row comparison
+            returns NULL if all the per-row results are either unequal or NULL with at least one NULL
+        {expr} NOT IN ({subquery})
+        {row_ctor} NOT IN ({subquery})
+        {expr} {op} ANY ({subquery})
+        {expr} {op} SOME ({subquery})
+        {expr} {op} ALL ({subquery})
+        {row_ctor} {op} ANY ({subquery})
+        {row_ctor} {op} SOME ({subquery})
+        {row_ctor} {op} ALL ({subquery})
+        {row_ctor} {op} ({subquery})
+            subquery cannot return more than one row
+            returns NULL if subquery returns zero rows
+    row and array comparisons
+        {expr} IN ({val}[, ...])
+            = OR
+        {expr} NOT IN ({val}[, ...])
+            <> AND
+        {expr} {op} ANY ({array expr})
+        {expr} {op} SOME ({array expr})
+        {expr} {op} ALL ({array expr})
+        {row_ctor} {op} {row_ctor}
+        {row_ctor} IS DISTINCT FROM {row_ctor}
+        {row_ctor} IS NOT DISTINCT FROM {row_ctor}
+        {record} {op} {record}
+    set returning functions
+        possibly return more than one row
+        generate_series(start, stop)
+            arg type:  int, bigint or numeric
+            return type:  setof {arg-type}
+            generate series of values, from start to stop with a step size of one
+        generate_series(start, stop, step)
+            arg type:  int, bigint or numeric
+            return type:  setof {arg-type}
+            generate series of values, from start to stop with a step size of step
+        generate_series(start, stop, step interval)
+            arg type:  timestamp or timestamp with time zone
+            return type:  setof {arg-type}
+            generate series of values, from start to stop with a step size of step
+        returns zero rows if step > 0 and start > stop
+        returns zero rows if step < 0 and start < stop
+        returns zero rows for NULL inputs
+        errors if step is zero
+        generate_subscripts(array anyarray, dim int)
+        generate_subscripts(array anyarray, dim int, reverse boolean)
+            returns setof int
+            generates series comprising the given array's subscripts
+    system information functions
+        https://www.postgresql.org/docs/11/functions-info.html
+    system administration functions
+        https://www.postgresql.org/docs/11/functions-admin.html
+    trigger functions
+        https://www.postgresql.org/docs/11/functions-trigger.html
+    event trigger functions
+        https://www.postgresql.org/docs/11/functions-event-triggers.html
+    type conversion
+        implicit conversions done by postgresql can affect query results
+        integers, non-integer numbers, strings, identifiers, and key words
+        constants of most non-numeric types are first classified as strings
+        principles
+            implicit conversions shouldn't be surprising
+            no extra overhead for parser or executor
+            function arg type matching trumps implicit conversions
+        operator type resolution
+            1. subselect operators by name and number of args
+            2. check for exact match of arg types
+                if one argument is an unknown type, assume it's the same time as the known arg
+            3. look for best match
+                discard ops whose type doesn't match (using implicit conversion)
+                if any arg type is a domain, treat as domain's base type
+            4. filter by most exact type matches
+                if only one candidate left, use it
+            5. filter by most implicit conversions to preferred types
+                if only one candidate left, use it
+            6. if any args are unknown, filter candidates by `string` category
+                if only one candidate left, use it
+            7. if both unknown and known-type args and all known-type args have same type,
+                assume unknown arg has same type
+        function type resolution
+            1. subselect functions by name and number of args
+                a. search path leads to override of same-name same-types
+                    otherwise, position in search path doesn't matter
+                b. if call is not VARIADIC but function is, array param unnested
+                    might lead to same-name same-types override as 1.a
+                c. default parameter values also leads to more matches.
+                    might lead to same-name same-types override as 1.a
+                    might lead to "ambiguous function call" error
+            2. check for exact match of arg types
+            3. check function call is special type conversion request,
+                name same as a data type
+                one arg:
+                    unknown-type literal, or
+                    type binary-coercible to named type, or
+                    type that could be coerced to an arg to the named type's IO func
+            4. look for best match
+                a. discard funcs whose arg types don't match and can't be coerced
+                    unknown literals assumed to be convertable to anything
+                    if only one candidate left, use it
+                b. if arg type is domain, convert to base type
+                c. filter by most exact type matches
+                    if only one candidate left, use it
+                d. filter by most implicit conversions to preferred types
+                    if only one candidate left, use it
+                e. if any args are unknown, filter candidates by `string` category
+                    if only one candidate left, use it
+                f. if both unknown and known-type args and all known-type args have same type,
+                    assume unknown arg has same type
+        value storage conversion
+            1. check for exact match with target
+            2. if expr is unknown literal, feed to target type conversion routine
+                else try to convert expr to target using "assignment cast"s
+            3. check for sizing cast for target (cast from type to itself)
+        UNION, CASE, and related constructs
+            1. if all inputs are same type and not unknown, resolve to that type
+            2. if any input is domain type, treat as base type
+            3. if all types unknown, resolve to text
+                otherwise unknown inputs are ignored
+            4. if all non-unknown inputs aren't the same type, fail
+            5. choose first non-unknown type which is a preferred type in category
+            6. choose last non-unknown type to which preceeding non-unknown types can be converted
+            7. convert all inputs to the selected type. fail if no conversion avialable
+        SELECT output columns
+            proceeding rules handle all but unspecified-type literals as simple output columns
+            e.g. SELECT 'Hello World'
+            resolved as text
+    indexes
+        faster reads, but add overhead
+        without index, scan whole table
+        CREATE [UNIQUE] INDEX {name} ON {table} [USING {type}] ({list of colindex}) [INCLUDE({payload-cols})] [WHERE {predicate}]
+            {colindex}  := {colname} [{opclass}] [{collateopt}] [{sortopts}]
+                        := {expr-on-col}
+            {collateopt} := COLLATE "{collatename}"
+            {sortopts}  := [ASC|DESC] [NULLS [FIRST|LAST]]
+        DROP INDEX {name}
+        while creating an index, by default, reads can occur but writes (INSERT UPDATE DELETE) are block
+        indexes add overhead to writes, so if unneeded might be best to remove
+        index type btree (default)
+            equality and range queries on data that can be sorted into some ordering
+            < <= = >= >  BETWEEN  IN  IS NULL  IS NOT NULL
+            LIKE ~      if pattern is a constant and anchored at the beginning (for locale=C, trickier for other locales)
+            ILIKE ~*    if pattern starts with non-alphabetic characters, i.e. not affected by case
+            can be used to retrieve data in sorted order. not always faster but often helpful
+        index type hash
+            only simple equality comparisons
+        index type gist
+            not single kind of index, but infrastructure for many different indexing strategies
+            operators depend on indexing strategy (operator class)
+            e.g. (builtin):  two-dimensional geometric data
+                << &< &> <<| &<| |&> |>> @> <@ ~= &&
+            more operator classes available in `contrib` collection, or separately
+            also capable of optimizing “nearest-neighbor” searches
+                e.g. SELECT * FROM places ORDER BY location <-> point '(101,456)' LIMIT 10
+                dependent on operator class
+        index type spgist
+            not single kind of index, but infrastructure for many different indexing strategies
+            wide range of different non-balanced disk-based data structures (quadtrees, k-d trees, radix trees)
+            operators depend on indexing strategy (operator class)
+            e.g. (builtin):  two-dimensional geometric points
+                << >> ~= <@ <^ >^
+        index type gin
+            "inverted indexes" map data values to rows
+            useful for cells that contain multiple values (e.g. arrays)
+            not single kind of index, but infrastructure for many different indexing strategies
+            operators depend on indexing strategy (operator class)
+            e.g. (builtin):  arrays
+                <@ @> = &&
+        index type brin
+            stores summaries about values stored in consecutive physcal block ranges of table
+            not single kind of index, but infrastructure for many different indexing strategies
+            operators depend on indexing strategy (operator class)
+            for types with linear sort order, supports
+                < <= = >= >
+        multicolumn indexes
+            supported by btree gist gin brin
+            up to 32 columns
+            each column should use operators appropriate to the type
+            should be used sparingly
+                more than three columns unlikely to be helpful unless very specific queries
+            multicolumn btree
+                used with query having any subset of indexed columns
+                but most efficient with constraints on leading (leftmost) columns
+                equality on leading(s) and inequality on first non-equality
+                other constraints are checked against index
+            multicolumn gist
+                used with query having any subset of indexed columns
+                condition on first column is most important, other columns used too
+                gist relatively inefficient if first column has only a few distinct values
+            multicolumn gin
+                used with query having any subset of indexed columns
+                index effectiveness is same regardless of position of columns
+            multicolumn brin
+                used with query having any subset of indexed columns
+                index effectiveness is same regardless of position of columns
+        indexes and ORDER BY
+            may be able to be used to order returned rows
+            planner will consider:  scanning available index, or scan table in physical order then sorting
+                indexes are more useful when only a few rows need to be fetched
+            index can be helpful for ORDER BY ... LIMIT n
+            ordering by btree
+                stores entries in ascending order, NULLs last (default)
+                    so these are natural
+                        ORDER BY x ASC NULLS LAST
+                        ORDER BY x DESC NULLS FIRST
+                options mainly useful for multicolumn indexes
+                    fairly specialized, but can provide tremendous speedups
+        combining multiple indexes
+            single index will only be used if conditions joined with AND
+            planner can form AND and OR conditions across several indexes
+            scans each index, makes a bitmap (in memory)
+            layed out in physical order, so any sorting in the index(es) is lost
+            so, planner will sometimes choose simple index scan
+        unique indexes
+            only btree supports uniqueness
+            null values are not considered equal
+            multicolumn will only reject if all indexed cols are equal in multiple rows
+            automatically created for unique constraint or primary key constraint
+        indexes and expressions
+            condition can be not just column but also func or scalar expr computed from one-or-more cols
+            e.g. CREATE INDEX test1_lower_col1_idx ON test1 (lower(col1))
+            index expr are relatively expensive to maintain (at write-time)
+        partial indexes
+            built over a subset of the table
+            subset defined by conditional expr (called predicate)
+            indexed col(s) and col(s) in predicate don't have to match
+            query parameters don't take part, since partial indexes are chosen at query plan-time
+            usecase:  avoid indexing common values
+            usecase:  exclude values that aren't used in queries
+            usecase:  create unique index on subset of rows
+            usecase:  allow only one NULL in column
+            usecase:  trick query planner to -not- use index when it shouldn't
+            note:  partial indexes most useful when you know as much as (or more than) query planner
+            note:  if table is so big that single index is bad idea, should look at table partitioning
+        index-only scans and covering indexes
+            all indexes are "secondary indexes" := stored separate from table's main data (called "heap")
+            for ordinary index scan, row retrieval requires fetch from both index and heap
+            heap-access portion of index scan involves lots of random access of heap, can be slow
+            index-only scans can answer query from index alone, without heap
+            restriction 1
+                index type must support index-only scans:  btree always, gist & spgist for some op classes
+                index must store, or be able to reconstruct, original data
+            restriction 2
+                query must reference only columns in the index
+                expression indexes and partial indexes complicate this
+            also
+                pg must verify that each row be "visible" to the query's snapshot
+                that metadata store in heap (not index)
+                for seldom-changing data there is a workaround
+            helpful: make a "covering index" which includes all cols of desired query
+                CREATE INDEX ... INCLUDE ({payload-cols})
+                only btree, not exprs
+        operator classes and operator families
+            opclass identifies the ops used by index of that column
+            e.g. btree on int4 ues `int4_opts` class
+            in practice, default opclass for type is usually sufficient
+            builtins
+                text_pattern_ops (btree text)
+                varchar_pattern_ops (btree varchar)
+                bpchar_pattern_ops (btree char)
+                compared character-by-character, instead of locale-sensitive
+            opclass is just subset of larger structure called "operator family"
+                (opclass := set of operators which work on one type)
+                (opfam := set of opclasses, so can span types)
+        indexes and collations
+            one collation per index col
+            e.g. CREATE INDEX idx ON tbl (content COLLATE "y")
+        examining index usage tips
+            - always run ANALYZE first
+            - use real data for experimentation
+            - during testing, try forcing indexes to be used to see what happens
+                if indexes not used, might indicate deeper problem
+                if used, system is right or cost estimates aren't accurate
+                    EXPLAIN ANALYZE can be helpful
+                if cost estimates are inaccurate, try tweaking pg or table params
+    full text search
+        https://www.postgresql.org/docs/11/textsearch.html
+    concurrency control
+        multiversion concurrency control (MVCC)
+        each statement sees a snapshot of the data
+        reads never block writes and writes never block reads
+        table- and row-level locking is also available
+        transaction isolation
+            phenomena
+                dirty read [DR]
+                nonrepeatable read [NRR]
+                phantom read [PR]
+                serialization anomaly [SA]
+            SQL defines four levels
+                                    DR          NRR         PR          SA
+                read uncommitted    allowed*1   possible    possible    possible
+                read committed      nope        possible    possible    possible
+                repeatable read     nope        nope        allowed*1   possible
+                serializable:       nope        nope        nope        nope
+                *1: but not in pg
+            pg supports three, since pg's read uncommitted behaves like read committed
+            important
+                some pg data types and funcs have special rules regarding transactions
+            read committed isolation level (default)
+                SELECT (without FOR UPDATE/SHARE) sees only data committed before query began
+                does see effects of previous updates within its own transaction, even though not yet committed
+                UPDATE, DELETE, SELECT FOR UPDATE, SELECT FOR SHARE
+                    behave the same for searching target rows
+                    would-be updateer waits for other updating tx to commit/rollback
+                    if other tx commits, this updater ignores row if deleted, or re-eval WHERE to see if update still applies
+                INSERT ... ON CONFLICT DO UPDATE (upsert)
+                    similar to above
+                INSERT ... ON CONFLICT DO NOTHING
+                possible for update to see inconsistent snapshot
+                "read committed" unsuitable for commands with complex search conditions
+                however, good for simpler cases
+            repeatable read isolation level
+                only sees data committed before tx began
+                never sees uncommitted data
+                never sees changes committed by other tx
+                apps using this level must be prepared to retry txs due to serialization failures
+                UPDATE, DELETE, SELECT FOR UPDATE, SELECT FOR SHARE
+                    behave the same as SELECT for searching for target rows
+                    such target row might have already been updated (or deleted or locked) by another tx
+                        waits for other tx to commit/rollback, if commit, "could not serialize access due to concurrent update"
+                read-only txs will never have serialization conflicts
+            serializable isolation level
+                similear to repeatable read, additionally monitors for conditions which would cause differences from strictly-serial execution
+                apps using this level must be prepared to retry txs due to serialization failures
+                monitoring doesn't introduce extra blocking, but does have overhead
+                data read is not valid until tx has committed
+                    except deferrable read-only txs, which wait until it gets a known-valid snapshot
+                predicate locks are based on data actually accesses by tx
+                query planner might lead to corser/broader locks (e.g. page locks)
+                READ ONLY tx might be able to release its SIReadLock before completion
+                    in fact, often able to establish no-conficts at startup and avoid predicate locks
+                    if SERIALIZABLE READ ONLY DEFERRABLE, will block until it can establish no-conflicts
+                consistent use of serializable txs can simplify development, but code should well handle serialization failures
+                serializable txs might be better performing than explicit locks or SELECT FOR UPDATE/SHARE
+                when relying on serializable txs, consider
+                    - declare transactions READ ONLY when possible
+                    - control number of active connections
+                    - don't put more into single tx than needed
+                    - don'e leave connections dangling in "idle in tx" longer than necessary
+                    - eliminate explicit locks, SELECT FOR UPDATE/SHARE where security already provided by serializable txs
+                    - if page-level pred locks downgraded to relation-level locks a lot, tune max_pred_locks_per_* params
+                    - sequential scan always means relation-level pred lock. encourage index scans
+        explicit locking
+            https://www.postgresql.org/docs/11/explicit-locking.html
+        data consistency checks at app level
+            read committed is messy
+            repeatable read has known "read/write conflict" issue
+            serializable is safest
+            using serializable for all writes and all reads which need consistency
+                no other effort is needed to ensure consistency
+                but app needs to retry txs which fail due to serialization failure
+            using explicit blocking locks
+                helpful if something somewhere is using non-serializable isolation
+                SELECT FOR UPDATE/SHARE or appropriate LOCK TABLE
+                when using SELECT FOR UPDATE, also need to do an UPDATE (even if nop) on the row(s)
+            if relying on explicit locking
+                either use read committed, or
+                in repeatable read be careful about obtaining locks before queries
+        caveats
+            TRUNCATE and ALTER TABLE are not MVCC-safe
+            serializable isolation not available for hot standby replication targets
+            internal access to system catalogs doesn't use isolation level of current tx
+        locking and indexes
+            btree gist spgist
+                highest concurrency without deadlock conditions
+                short-term share/exclusive page-level locks are used for read/write access
+                locks are released after each index row is fetched or inserted
+            hash
+                share/exclusive hash-bucket-level locks are used for read/write access
+                locks are released after whole bucket is processed
+                bucket-level locks provide better concurrency than index-level ones
+                deadlock is possible since the locks are held longer than one index operation
+            gin
+                short-term share/exclusive page-level locks are used for read/write access
+                locks are released immediately after each index row is fetched or inserted
+                insertion produces several index key insertions per row, so might do substantial work for each value insertion
+            btree best for concurrent apps
+    performance tips
+        planner devises query plan for each query
+        results aren't portable, very situationally dependent
+        EXPLAIN basics
+            tree of plan nodes
+            at bottom are scan nodes, returning raw rows from table
+            sequential scan, index scan, bitmap index scan, VALUES clauses, setof funcs in FROM
+            additional nodes if joining, aggregating, sorting, or other ops on raw rows
+            output has one line for each node in plan tree
+            top line is total execution cost for plan
+            numbers
+                estimated startup cost
+                    sorting done here
+                estimated total cost
+                    if node run to completion
+                    but parent node my stop reading all
+                estimated number of rows
+                    if node run to completion
+                    but parent node my stop reading all
+                estimated average width of result rows (in bytes)
+            costs are arbitrary units
+                perhaps related to disk page fetches
+            cost of upper-level node includes cost of all children
+        EXPLAIN ANALYZE
+            actually executes the query
+                put in tx with ROLLBACK to discard side effects
+            reported actual time are in milliseconds
+            `loops` reports number of executions of node
+            check whether actual row counts are close to estimated
+            BUFFERS helps identify which nodes are more io intensive
+            execution time
+                includes executor startup and shutdown, and time to run triggers
+                does not include parsing, rewriting, or planning time
+            time for BEFORE triggers is shown in each node
+            AFTER triggers fire after the whole plan
+            doesn't reflect network and io conversions in estimates/costs
+            measurement overhead can be significant
+        statistics used by planner
+            single column statistics
+                number of total entries in each table and index
+                number of disk blocks in each table and index
+                pg_class reltuples and relpages aren't always up-to-date
+                    updated by VACUUM, ANALYZE, and stuff like CREATE INDEX
+                planner estimates selectivity of WHERE clauses
+                    in pg_statistic
+                    updated by ANALYZE and VACUUM ANALYZE
+                    always just an approximation
+                    pg_stats view meant to be more readable
+                    for rows with irregular distributions
+                        ALTER TABLE SET STATISTICS can change number of entries in pg_statistic (default 100)
+            extended statistics
+                planner assumes that multiple conditions are independent
+                thus columns that are interrelated can cause slow execution
+                pg can compute "multivariate statistics"
+                CREATE STATISTICS IF NOT EXISTS {name} [({statskind},...)] ON {colname}, {colname}, {...} FROM {tabname}
+                ANALYZE (or background process) populates pg_statistic_ext
+                functional dependencies
+                    B is functionally dependent on A if knowledge about A is sufficient to determine B
+                    no two rows having same values of A but different values of B
+                    fully normalized dbs only have functional deps on pks and superkeys
+                    could also be partial correlation between cols, which is a partial functional dep
+                    if query contains conditions on both independent and dependent cols, tricky for planner to know
+                    advice:  create dep stats only for col groups that are strongly correlated
+                    only applied for equality conditions comparing cols to consts
+                    planner assumes conditions on queries will likely apply
+                    CREATE STATISTICS {name} (dependencies) ON {cols} FROM {table}
+                multivariate n-distict counts
+                    background
+                        single-col stats store number of distinct vals
+                        estimates of distinct vals for multi-cols (e.g. GROUP BY a,b) are frequently wrong
+                    CREATE STATISTICS {name} (ndistinct) ON {cols} FROM {table}
+                    advice:  create ndistinct stats only on col combos that are used for grouping and which leads to bad plans
+        controlling the planner with explicit JOIN clauses
+            background
+                e.g. SELECT * FROM a, b, c WHERE a.id = b.id AND b.ref = c.id
+                planner can join tables in any order
+                could join a to c first, which leads to very large number of intermediate rows
+                multiple plans to same results, but some plans are really inefficient
+            planner explores all ways to perform join
+            not too many combos with 2 or 3 tables, grows exponentially
+            beyond 10 or so tables can't review all combos
+            planner might think alot even for 6 or 7 tables
+            join to view whose query contains join(s) can lead to many joins
+            beyond a certain number, planner switches over to genetic probabilistic search through subset
+            only FULL JOIN constraints the join order
+            to force planner to follow join order in query, set join_collapse_limit=1 runtime param
+            from_collapse_limit also plays a role here
+        populating a database
+            disable autocommit
+                BEGIN; ...boatload of INSERTs...; COMMIT
+            use COPY
+                optimized for loading large number of rows
+                if not possible, consider using a prepared statement (with params)
+            remove indexes
+                if populating freshly created table
+                    create cols, bulk load data using COPY, create indexes
+                on existing table
+                    might be faster to drop indexes, load, then recreate indexes
+            remove foreign key constraints
+                ... similar to previous idea
+                loading lots with FKs on leads to large pending triggers queue, which can overflow/fail
+            temp increase maintenance_work_mem
+                can speed up CREATE INDEX and ALTER TABLE ADD FOREIGN KEY (mentioned above)
+                doesn't help COPY much
+            temp increase max_wal_size
+            disable WAL archival and streaming replication
+                if using WAL archiving or streaming repl
+            run ANALYZE afterwards
+                whenver distribution of data has significantly changed
+            some notes about pg_dump
+                dumped sql automatically applies some of the above ideas
+                to restore as fast as possible
+                    - set appropriate values for maintenance_work_mem and max_wal_size
+                    - if using WAL archiving or streaming replication, consider disabling them during the restore
+                    - experiment with parallel dump and restore modes of both pg_dump and pg_restore
+                    - consider whether whole dump should be restored as single transaction
+                    - if multiple CPUs available in db server, consider using pg_restore --jobs option
+                    - run ANALYZE afterwards
+        non-durable settings
+            durability guarantees that committed txs survive server crashes or loss of power
+            adds significant overhead though, so might be worth turning off
+                - place db datadir on memory fs
+                - turn off fsync
+                - turn off synchronous_commit
+                - turn off full_page_writes
+                - increase max_wal_size and checkpoint_timeout
+                - create unlogged tables to avoid WAL writes
+    parallel query
+        leverage multiple cpus
+        https://www.postgresql.org/docs/11/parallel-query.html
+    server administration
+        https://www.postgresql.org/docs/11/admin.html
+    routine database maintenance tasks
+        required, but can be automated
+        frequent backups
+        periodic vacuuming
+            for many, autovacuum daemon is sufficient
+            VACUUM or VACUUM FULL
+            VACUUM FULL recovers more, but runs more slowly and locks each table
+            if completely emptying table, use TRUNCATE instead of DELETE;VACUUM
+        periodic updating of statistics
+            gathered by ANALYZE
+            more useful for heavily updated tables
+            run separately or optional step in VACUUM
+            might be nicer to manually run scheduled ANALYZEs
+            tip:  columns heavily used in WHERE that have irregular data distribution
+                might benefit from per-column stats tweaking
+        autovacuum daemon
+            mostly just runs
+            might need some tweaking
+        routine reindexing
+            it's a good idea to periodically monitor index physical size for non-btree
+            fresh btrees are often slightly faster
+            REINDEX is safe and easy in all cases
+            but requires an exclusive table lock
+        log file maintenance
+            set logging_collector to true (postgresql.conf)
+            or another log rotation/management approach
+                e.g. pg_ctl start | rotatelogs /var/log/pgsql_log 86400
+    triggers
+        https://www.postgresql.org/docs/11/triggers.html
+    event triggers
+        https://www.postgresql.org/docs/11/event-triggers.html
+    sql commands reference
+        https://www.postgresql.org/docs/11/sql-commands.html
+        ABORT — abort the current transaction
+            ABORT [ WORK | TRANSACTION ]
+            use ROLLBACK instead
+        ALTER AGGREGATE — change the definition of an aggregate function
+        ALTER COLLATION — change the definition of a collation
+        ALTER CONVERSION — change the definition of a conversion
+        ALTER DATABASE — change a database
+        ALTER DEFAULT PRIVILEGES — define default access privileges
+        ALTER DOMAIN — change the definition of a domain
+        ALTER EVENT TRIGGER — change the definition of an event trigger
+        ALTER EXTENSION — change the definition of an extension
+        ALTER FOREIGN DATA WRAPPER — change the definition of a foreign-data wrapper
+        ALTER FOREIGN TABLE — change the definition of a foreign table
+        ALTER FUNCTION — change the definition of a function
+        ALTER GROUP — change role name or membership
+        ALTER INDEX — change the definition of an index
+            https://www.postgresql.org/docs/11/sql-alterindex.html
+        ALTER LANGUAGE — change the definition of a procedural language
+        ALTER LARGE OBJECT — change the definition of a large object
+        ALTER MATERIALIZED VIEW — change the definition of a materialized view
+        ALTER OPERATOR — change the definition of an operator
+        ALTER OPERATOR CLASS — change the definition of an operator class
+        ALTER OPERATOR FAMILY — change the definition of an operator family
+        ALTER POLICY — change the definition of a row level security policy
+        ALTER PROCEDURE — change the definition of a procedure
+        ALTER PUBLICATION — change the definition of a publication
+        ALTER ROLE — change a database role
+        ALTER ROUTINE — change the definition of a routine
+        ALTER RULE — change the definition of a rule
+        ALTER SCHEMA — change the definition of a schema
+            ALTER SCHEMA name RENAME TO new_name
+            ALTER SCHEMA name OWNER TO { new_owner | CURRENT_USER | SESSION_USER }
+        ALTER SEQUENCE — change the definition of a sequence generator
+        ALTER SERVER — change the definition of a foreign server
+        ALTER STATISTICS — change the definition of an extended statistics object
+        ALTER SUBSCRIPTION — change the definition of a subscription
+        ALTER SYSTEM — change a server configuration parameter
+            ALTER SYSTEM SET configuration_parameter { TO | = } { value | 'value' | DEFAULT }
+            ALTER SYSTEM RESET configuration_parameter
+            ALTER SYSTEM RESET ALL
+        ALTER TABLE — change the definition of a table
+            https://www.postgresql.org/docs/11/sql-altertable.html
+            ALTER TABLE [ IF EXISTS ] [ ONLY ] name [ * ]
+                action [, ... ]
+            ALTER TABLE [ IF EXISTS ] [ ONLY ] name [ * ]
+                RENAME [ COLUMN ] column_name TO new_column_name
+            ALTER TABLE [ IF EXISTS ] [ ONLY ] name [ * ]
+                RENAME CONSTRAINT constraint_name TO new_constraint_name
+            ALTER TABLE [ IF EXISTS ] name
+                RENAME TO new_name
+            ALTER TABLE [ IF EXISTS ] name
+                SET SCHEMA new_schema
+            ALTER TABLE ALL IN TABLESPACE name [ OWNED BY role_name [, ... ] ]
+                SET TABLESPACE new_tablespace [ NOWAIT ]
+            ALTER TABLE [ IF EXISTS ] name
+                ATTACH PARTITION partition_name { FOR VALUES partition_bound_spec | DEFAULT }
+            ALTER TABLE [ IF EXISTS ] name
+                DETACH PARTITION partition_name
+            action := oneof
+                ADD [ COLUMN ] [ IF NOT EXISTS ] column_name data_type [ COLLATE collation ] [ column_constraint [ ... ] ]
+                DROP [ COLUMN ] [ IF EXISTS ] column_name [ RESTRICT | CASCADE ]
+                ALTER [ COLUMN ] column_name [ SET DATA ] TYPE data_type [ COLLATE collation ] [ USING expression ]
+                ALTER [ COLUMN ] column_name SET DEFAULT expression
+                ALTER [ COLUMN ] column_name DROP DEFAULT
+                ALTER [ COLUMN ] column_name { SET | DROP } NOT NULL
+                ALTER [ COLUMN ] column_name ADD GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ]
+                ALTER [ COLUMN ] column_name { SET GENERATED { ALWAYS | BY DEFAULT } | SET sequence_option | RESTART [ [ WITH ] restart ] } [...]
+                ALTER [ COLUMN ] column_name DROP IDENTITY [ IF EXISTS ]
+                ALTER [ COLUMN ] column_name SET STATISTICS integer
+                ALTER [ COLUMN ] column_name SET ( attribute_option = value [, ... ] )
+                ALTER [ COLUMN ] column_name RESET ( attribute_option [, ... ] )
+                ALTER [ COLUMN ] column_name SET STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN }
+                ADD table_constraint [ NOT VALID ]
+                ADD table_constraint_using_index
+                ALTER CONSTRAINT constraint_name [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+                VALIDATE CONSTRAINT constraint_name
+                DROP CONSTRAINT [ IF EXISTS ]  constraint_name [ RESTRICT | CASCADE ]
+                DISABLE TRIGGER [ trigger_name | ALL | USER ]
+                ENABLE TRIGGER [ trigger_name | ALL | USER ]
+                ENABLE REPLICA TRIGGER trigger_name
+                ENABLE ALWAYS TRIGGER trigger_name
+                DISABLE RULE rewrite_rule_name
+                ENABLE RULE rewrite_rule_name
+                ENABLE REPLICA RULE rewrite_rule_name
+                ENABLE ALWAYS RULE rewrite_rule_name
+                DISABLE ROW LEVEL SECURITY
+                ENABLE ROW LEVEL SECURITY
+                FORCE ROW LEVEL SECURITY
+                NO FORCE ROW LEVEL SECURITY
+                CLUSTER ON index_name
+                SET WITHOUT CLUSTER
+                SET WITH OIDS
+                SET WITHOUT OIDS
+                SET TABLESPACE new_tablespace
+                SET { LOGGED | UNLOGGED }
+                SET ( storage_parameter [= value] [, ... ] )
+                RESET ( storage_parameter [, ... ] )
+                INHERIT parent_table
+                NO INHERIT parent_table
+                OF type_name
+                NOT OF
+                OWNER TO { new_owner | CURRENT_USER | SESSION_USER }
+                REPLICA IDENTITY { DEFAULT | USING INDEX index_name | FULL | NOTHING }
+            column_constraint :=
+                [ CONSTRAINT constraint_name ]
+                { NOT NULL |
+                NULL |
+                CHECK ( expression ) [ NO INHERIT ] |
+                DEFAULT default_expr |
+                GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ] |
+                UNIQUE index_parameters |
+                PRIMARY KEY index_parameters |
+                REFERENCES reftable [ ( refcolumn ) ] [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ]
+                    [ ON DELETE action ] [ ON UPDATE action ] }
+                [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+            table_constraint :=
+                [ CONSTRAINT constraint_name ]
+                { CHECK ( expression ) [ NO INHERIT ] |
+                UNIQUE ( column_name [, ... ] ) index_parameters |
+                PRIMARY KEY ( column_name [, ... ] ) index_parameters |
+                EXCLUDE [ USING index_method ] ( exclude_element WITH operator [, ... ] ) index_parameters [ WHERE ( predicate ) ] |
+                FOREIGN KEY ( column_name [, ... ] ) REFERENCES reftable [ ( refcolumn [, ... ] ) ]
+                    [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ] [ ON DELETE action ] [ ON UPDATE action ] }
+                [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+        ALTER TABLESPACE — change the definition of a tablespace
+        ALTER TEXT SEARCH CONFIGURATION — change the definition of a text search configuration
+        ALTER TEXT SEARCH DICTIONARY — change the definition of a text search dictionary
+        ALTER TEXT SEARCH PARSER — change the definition of a text search parser
+        ALTER TEXT SEARCH TEMPLATE — change the definition of a text search template
+        ALTER TRIGGER — change the definition of a trigger
+        ALTER TYPE — change the definition of a type
+        ALTER USER — change a database role
+        ALTER USER MAPPING — change the definition of a user mapping
+        ALTER VIEW — change the definition of a view
+            ALTER VIEW [ IF EXISTS ] name ALTER [ COLUMN ] column_name SET DEFAULT expression
+            ALTER VIEW [ IF EXISTS ] name ALTER [ COLUMN ] column_name DROP DEFAULT
+            ALTER VIEW [ IF EXISTS ] name OWNER TO { new_owner | CURRENT_USER | SESSION_USER }
+            ALTER VIEW [ IF EXISTS ] name RENAME TO new_name
+            ALTER VIEW [ IF EXISTS ] name SET SCHEMA new_schema
+            ALTER VIEW [ IF EXISTS ] name SET ( view_option_name [= view_option_value] [, ... ] )
+            ALTER VIEW [ IF EXISTS ] name RESET ( view_option_name [, ... ] )
+            https://www.postgresql.org/docs/11/sql-alterview.html
+        ANALYZE — collect statistics about a database
+            ANALYZE [ ( option [, ...] ) ] [ table_and_columns [, ...] ]
+            ANALYZE [ VERBOSE ] [ table_and_columns [, ...] ]
+            option := oneof: VERBOSE
+            table_and_columns := table_name [ ( column_name [, ...] ) ]
+            requires only a read lock on the target table, so it can run in parallel with other activity on the table
+        BEGIN — start a transaction block
+            BEGIN [ WORK | TRANSACTION ] [ transaction_mode [, ...] ]
+            transaction_mode := oneof
+                ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED }
+                READ WRITE | READ ONLY
+                [ NOT ] DEFERRABLE
+        CALL — invoke a procedure
+            CALL name ( [ argument ] [, ...] )
+            to call a function (not a procedure), use SELECT instead
+            if CALL is executed in a tx, then the called procedure cannot execute tx control statements
+            tx control statements are only allowed if CALL is executed in its own tx
+        CHECKPOINT — force a write-ahead log checkpoint
+        CLOSE — close a cursor
+        CLUSTER — cluster a table according to an index
+            CLUSTER [VERBOSE] table_name [ USING index_name ]
+            CLUSTER [VERBOSE]
+            when a table is being clustered, an ACCESS EXCLUSIVE lock is acquired on it
+                prevents any other database operations (both reads and writes) from operating
+                on the table until the CLUSTER is finished
+        COMMENT — define or change the comment of an object
+            COMMENT ON {type} {name} {...} IS '{text}'
+        COMMIT — commit the current transaction
+            COMMIT [ WORK | TRANSACTION ]
+        COMMIT PREPARED — commit a transaction that was earlier prepared for two-phase commit
+            COMMIT PREPARED transaction_id
+            to commit, must be same user (or superuser)
+            don't need to be the same session
+        COPY — copy data between a file and a table
+            COPY table_name [ ( column_name [, ...] ) ]
+                FROM { 'filename' | PROGRAM 'command' | STDIN }
+                [ [ WITH ] ( option [, ...] ) ]
+            COPY { table_name [ ( column_name [, ...] ) ] | ( query ) }
+                TO { 'filename' | PROGRAM 'command' | STDOUT }
+                [ [ WITH ] ( option [, ...] ) ]
+            option := oneof
+                FORMAT format_name -- text(default), csv, binary
+                OIDS [ boolean ]
+                FREEZE [ boolean ]
+                DELIMITER 'delimiter_character' -- default tab
+                NULL 'null_string' -- default \N (text), unquoted empty string (csv)
+                HEADER [ boolean ] -- only csv
+                QUOTE 'quote_character' -- only csv, default doublequote
+                ESCAPE 'escape_character' -- only csv, default same as QUOTE
+                FORCE_QUOTE { ( column_name [, ...] ) | * } -- only COPY TO, only csv
+                FORCE_NOT_NULL ( column_name [, ...] ) -- only COPY FROM, only csv
+                FORCE_NULL ( column_name [, ...] ) -- only COPY FROM, only csv
+                ENCODING 'encoding_name'
+            COPY TO only plain tables, not views
+            files are relative to the server, on the server
+            text format
+                \.  end of STDIN, when on its own line
+                \\  backslash
+                \b  backspace
+                \f  form feed
+                \n  newline
+                \r  carriage return
+                \t  tab
+                \v  vertical tab
+                \{digits}   1-3 octal digits
+                \x{digits}  1-2 hex digits
+                \{anything else}    taken as that
+            https://www.postgresql.org/docs/11/sql-copy.html
+        CREATE ACCESS METHOD — define a new access method
+        CREATE AGGREGATE — define a new aggregate function
+        CREATE CAST — define a new cast
+        CREATE COLLATION — define a new collation
+        CREATE CONVERSION — define a new encoding conversion
+        CREATE DATABASE — create a new database
+            CREATE DATABASE name [
+                [ WITH ]
+                [ OWNER [=] user_name ]
+                [ TEMPLATE [=] template ]
+                [ ENCODING [=] encoding ]
+                [ LC_COLLATE [=] lc_collate ]
+                [ LC_CTYPE [=] lc_ctype ]
+                [ TABLESPACE [=] tablespace_name ]
+                [ ALLOW_CONNECTIONS [=] allowconn ]
+                [ CONNECTION LIMIT [=] connlimit ]
+                [ IS_TEMPLATE [=] istemplate ]
+            ]
+            cannot execute in a tx
+        CREATE DOMAIN — define a new domain
+        CREATE EVENT TRIGGER — define a new event trigger
+        CREATE EXTENSION — install an extension
+        CREATE FOREIGN DATA WRAPPER — define a new foreign-data wrapper
+        CREATE FOREIGN TABLE — define a new foreign table
+        CREATE FUNCTION — define a new function
+        CREATE GROUP — define a new database role
+        CREATE INDEX — define a new index
+            CREATE [ UNIQUE ] INDEX [ CONCURRENTLY ] [ [ IF NOT EXISTS ] name ]
+                ON [ ONLY ] table_name [ USING method ]
+                (   { column_name | ( expr ) }
+                    [ COLLATE collation ] [ opclass ] [ ASC | DESC ]
+                    [ NULLS { FIRST | LAST } ]
+                    [, ...]
+                )
+                [ INCLUDE ( column_name [, ...] ) ]
+                [ WITH ( storage_parameter [= value] [, ... ] ) ]
+                [ TABLESPACE tablespace_name ]
+                [ WHERE predicate ]
+            table or materialized view
+            multicolumn:  btree gist git brin
+            max 32 fields
+            expr
+                e.g. upper(col)
+                can refer to any columns in underlying table
+                funcs and ops must be "immutable" (output only depends on inputs)
+            method := btree(default) hash gist spgist gin brin
+            predicate -> partial index
+                only a portion of table
+                can refer to any columns in underlying table
+                funcs and ops must be "immutable" (output only depends on inputs)
+            CONCURRENTLY
+                build index w/out locks
+                default locks out writes
+                !! caveats exist
+            INCLUDE
+                causes specified column(s) to also be in index, as non-key (payload) values
+                useful for queries that need just a little bit extra to avoid going to disk for table blocks
+                tip:  be conservative, too much payload can cause INSERTs to fail
+                supported index methods:  btree (that's it)
+            storage parameters
+                fillfactor=pct (btree hash gist spgist)
+                    btree min 10 max 100 default 90
+                    static content, use 100
+                    heavy writes, use lower value
+                ... other more obscure settings ...
+        CREATE LANGUAGE — define a new procedural language
+        CREATE MATERIALIZED VIEW — define a new materialized view
+            CREATE MATERIALIZED VIEW [ IF NOT EXISTS ] table_name
+                [ (column_name [, ...] ) ]
+                [ WITH ( storage_parameter [= value] [, ... ] ) ]
+                [ TABLESPACE tablespace_name ]
+                AS query
+                [ WITH [ NO ] DATA ]
+            creates view with a snapshot of underlying data
+            storage_parameter := same as for CREATE TABLE
+        CREATE OPERATOR — define a new operator
+        CREATE OPERATOR CLASS — define a new operator class
+        CREATE OPERATOR FAMILY — define a new operator family
+        CREATE POLICY — define a new row level security policy for a table
+        CREATE PROCEDURE — define a new procedure
+        CREATE PUBLICATION — define a new publication
+        CREATE ROLE — define a new database role
+            CREATE ROLE name [ [ WITH ] option [ ... ] ]
+        CREATE RULE — define a new rewrite rule
+        CREATE SCHEMA — define a new schema
+            CREATE SCHEMA schema_name [ AUTHORIZATION role_specification ] [ schema_element [ ... ] ]
+            CREATE SCHEMA AUTHORIZATION role_specification [ schema_element [ ... ] ]
+            CREATE SCHEMA IF NOT EXISTS schema_name [ AUTHORIZATION role_specification ]
+            CREATE SCHEMA IF NOT EXISTS AUTHORIZATION role_specification
+        CREATE SEQUENCE — define a new sequence generator
+            CREATE [ TEMPORARY | TEMP ] SEQUENCE [ IF NOT EXISTS ] name
+                [ AS data_type ]
+                [ INCREMENT [ BY ] increment ]
+                [ MINVALUE minvalue | NO MINVALUE ] [ MAXVALUE maxvalue | NO MAXVALUE ]
+                [ START [ WITH ] start ] [ CACHE cache ] [ [ NO ] CYCLE ]
+                [ OWNED BY { table_name.column_name | NONE } ]
+            data_type := oneof smallint, integer, bigint(default)
+        CREATE SERVER — define a new foreign server
+        CREATE STATISTICS — define extended statistics
+            CREATE STATISTICS [ IF NOT EXISTS ] statistics_name
+                [ ( statistics_kind [, ... ] ) ]
+                ON column_name, column_name [, ...]
+                FROM table_name
+        CREATE SUBSCRIPTION — define a new subscription
+        CREATE TABLE — define a new table
+            CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXISTS ] table_name (
+                [   { column_name data_type [ COLLATE collation ] [ column_constraint [ ... ] ]
+                        | table_constraint
+                        | LIKE source_table [ like_option ... ]
+                    } [, ... ]
+                ]
+            )   [ INHERITS ( parent_table [, ... ] ) ]
+                [ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] ) ]
+                [ WITH ( storage_parameter [= value] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
+                [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+                [ TABLESPACE tablespace_name ]
+            CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXISTS ] table_name OF type_name [ (
+                { column_name [ WITH OPTIONS ] [ column_constraint [ ... ] ]
+                    | table_constraint
+                } [, ... ]
+            ) ] ...partition$c...
+            CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXISTS ] table_name PARTITION OF parent_table [ (
+                { column_name [ WITH OPTIONS ] [ column_constraint [ ... ] ]
+                    | table_constraint
+                } [, ... ]
+            ) ] { FOR VALUES partition_bound_spec | DEFAULT }
+                ...partition&c...
+            column_constraint :=
+                [ CONSTRAINT constraint_name ]
+                {   NOT NULL |
+                    NULL |
+                    CHECK ( expression ) [ NO INHERIT ] |
+                    DEFAULT default_expr |
+                    GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( sequence_options ) ] |
+                    UNIQUE index_parameters |
+                    PRIMARY KEY index_parameters |
+                    REFERENCES reftable [ ( refcolumn ) ]
+                        [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ]
+                        [ ON DELETE action ] [ ON UPDATE action ]
+                }
+                [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+            table_constraint :=
+                [ CONSTRAINT constraint_name ]
+                {
+                    CHECK ( expression ) [ NO INHERIT ] |
+                    UNIQUE ( column_name [, ... ] ) index_parameters |
+                    PRIMARY KEY ( column_name [, ... ] ) index_parameters |
+                    EXCLUDE [ USING index_method ] ( exclude_element WITH operator [, ... ] ) index_parameters [ WHERE ( predicate ) ] |
+                    FOREIGN KEY ( column_name [, ... ] )
+                        REFERENCES reftable [ ( refcolumn [, ... ] ) ]
+                        [ MATCH FULL | MATCH PARTIAL | MATCH SIMPLE ]
+                        [ ON DELETE action ] [ ON UPDATE action ]
+                }
+                [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+        CREATE TABLE AS — define a new table from the results of a query
+            CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXISTS ] table_name
+                [ (column_name [, ...] ) ]
+                [ WITH ( storage_parameter [= value] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
+                [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+                [ TABLESPACE tablespace_name ]
+                AS query
+                [ WITH [ NO ] DATA ]
+        CREATE TABLESPACE — define a new tablespace
+        CREATE TEXT SEARCH CONFIGURATION — define a new text search configuration
+        CREATE TEXT SEARCH DICTIONARY — define a new text search dictionary
+        CREATE TEXT SEARCH PARSER — define a new text search parser
+        CREATE TEXT SEARCH TEMPLATE — define a new text search template
+        CREATE TRANSFORM — define a new transform
+        CREATE TRIGGER — define a new trigger
+        CREATE TYPE — define a new data type
+            name must also be distinct from table names
+            when type created, pg automatically creates associated array type, name prefixed with underscore
+            CREATE TYPE name
+                placeholder to be defined later
+            CREATE TYPE name AS ( [ attribute_name data_type [ COLLATE collation ] [, ... ] ] )
+                composite type
+                similar to CREATE TABLE
+            CREATE TYPE name AS ENUM ( [ 'label' [, ... ] ] )
+            CREATE TYPE name AS RANGE (
+                SUBTYPE = subtype
+                [ , SUBTYPE_OPCLASS = subtype_operator_class ]
+                [ , COLLATION = collation ]
+                [ , CANONICAL = canonical_function ]
+                [ , SUBTYPE_DIFF = subtype_diff_function ]
+            )
+                subtype := any time with associated btree op class
+            CREATE TYPE name (
+                INPUT = input_function,
+                OUTPUT = output_function
+                [ , RECEIVE = receive_function ]
+                [ , SEND = send_function ]
+                [ , TYPMOD_IN = type_modifier_input_function ]
+                [ , TYPMOD_OUT = type_modifier_output_function ]
+                [ , ANALYZE = analyze_function ]
+                [ , INTERNALLENGTH = { internallength | VARIABLE } ]
+                [ , PASSEDBYVALUE ]
+                [ , ALIGNMENT = alignment ]
+                [ , STORAGE = storage ]
+                [ , LIKE = like_type ]
+                [ , CATEGORY = category ]
+                [ , PREFERRED = preferred ]
+                [ , DEFAULT = default ]
+                [ , ELEMENT = element ]
+                [ , DELIMITER = delimiter ]
+                [ , COLLATABLE = collatable ]
+            )
+                base (scalar) type
+                must be superuser
+                generally funcs need to be coded in C or another low-level lang
+        CREATE USER — define a new database role
+        CREATE USER MAPPING — define a new mapping of a user to a foreign server
+        CREATE VIEW — define a new view
+            CREATE [ OR REPLACE ] [ TEMP | TEMPORARY ] [ RECURSIVE ] VIEW name [ ( column_name [, ...] ) ]
+                [ WITH ( view_option_name [= view_option_value] [, ... ] ) ]
+                AS query
+                [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]
+            updatable
+                - only one entry in FROM, table or updatable view
+                - not contain WITH, DISTINCT, GROUP BY, HAVING, LIMIT, or OFFSET
+                - not contain set operators (UNION, INTERSECT, EXCEPT)
+                - select list not contain aggregates, window fns, or set-returning fns
+                column updatable if simple reference to underlying base
+                INSERT with ON CONFLICT UPDATE supported
+                if query has WHERE, also restricts rows addressable by UPDATE or DELETE
+                    UPDATE can still change a row to no longer be visible to view
+                    INSERT can still add a row not visible to view
+                    CHECK OPTION can be used to restrict the above two
+            non-updatable
+                can get similar to updatable by defining INSTEAD OF trigger on view
+        DEALLOCATE — deallocate a prepared statement
+            DEALLOCATE [ PREPARE ] { name | ALL }
+            automatically deallocated at session end
+        DECLARE — define a cursor
+        DELETE — delete rows of a table
+            [ WITH [ RECURSIVE ] with_query [, ...] ]
+            DELETE FROM [ ONLY ] table_name [ * ] [ [ AS ] alias ]
+                [ USING from_item [, ...] ]
+                [ WHERE condition | WHERE CURRENT OF cursor_name ]
+                [
+                    RETURNING * |
+                    output_expression [ [ AS ] output_name ] [, ...]
+                ]
+            from_item := same syntax as SELECT FROM ...
+            e.g. DELETE FROM films USING producers WHERE producer_id = producers.id AND producers.name = 'foo'
+            e.g. DELETE FROM films WHERE producer_id IN (SELECT id FROM producers WHERE name = 'foo')
+        DISCARD — discard session state
+            DISCARD { ALL | PLANS | SEQUENCES | TEMPORARY | TEMP }
+            releases internal resources associated with session
+        DO — execute an anonymous code block
+            DO [ LANGUAGE lang_name ] code
+            body of function with no parameters, returning void
+        DROP ACCESS METHOD — remove an access method
+        DROP AGGREGATE — remove an aggregate function
+        DROP CAST — remove a cast
+        DROP COLLATION — remove a collation
+        DROP CONVERSION — remove a conversion
+        DROP DATABASE — remove a database
+            DROP DATABASE [ IF EXISTS ] name
+        DROP DOMAIN — remove a domain
+        DROP EVENT TRIGGER — remove an event trigger
+        DROP EXTENSION — remove an extension
+        DROP FOREIGN DATA WRAPPER — remove a foreign-data wrapper
+        DROP FOREIGN TABLE — remove a foreign table
+        DROP FUNCTION — remove a function
+        DROP GROUP — remove a database role
+        DROP INDEX — remove an index
+            DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        DROP LANGUAGE — remove a procedural language
+        DROP MATERIALIZED VIEW — remove a materialized view
+        DROP OPERATOR — remove an operator
+        DROP OPERATOR CLASS — remove an operator class
+        DROP OPERATOR FAMILY — remove an operator family
+        DROP OWNED — remove database objects owned by a database role
+        DROP POLICY — remove a row level security policy from a table
+        DROP PROCEDURE — remove a procedure
+        DROP PUBLICATION — remove a publication
+        DROP ROLE — remove a database role
+        DROP ROUTINE — remove a routine
+        DROP RULE — remove a rewrite rule
+        DROP SCHEMA — remove a schema
+            DROP SCHEMA [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        DROP SEQUENCE — remove a sequence
+            DROP SEQUENCE [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        DROP SERVER — remove a foreign server descriptor
+        DROP STATISTICS — remove extended statistics
+            DROP STATISTICS [ IF EXISTS ] name [, ...]
+        DROP SUBSCRIPTION — remove a subscription
+        DROP TABLE — remove a table
+            DROP TABLE [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        DROP TABLESPACE — remove a tablespace
+        DROP TEXT SEARCH CONFIGURATION — remove a text search configuration
+        DROP TEXT SEARCH DICTIONARY — remove a text search dictionary
+        DROP TEXT SEARCH PARSER — remove a text search parser
+        DROP TEXT SEARCH TEMPLATE — remove a text search template
+        DROP TRANSFORM — remove a transform
+        DROP TRIGGER — remove a trigger
+        DROP TYPE — remove a data type
+            DROP TYPE [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        DROP USER — remove a database role
+        DROP USER MAPPING — remove a user mapping for a foreign server
+        DROP VIEW — remove a view
+            DROP TYPE [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
+        END — commit the current transaction
+            END [ WORK | TRANSACTION ]
+            commits current tx
+        EXECUTE — execute a prepared statement
+            EXECUTE name [ ( parameter [, ...] ) ]
+        EXPLAIN — show the execution plan of a statement
+            EXPLAIN [ ( option [, ...] ) ] statement
+            EXPLAIN [ ANALYZE ] [ VERBOSE ] statement
+        FETCH — retrieve rows from a query using a cursor
+        GRANT — define access privileges
+            GRANT
+                {   { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER } [, ...]
+                    | ALL [ PRIVILEGES ]
+                } ON
+                {   [ TABLE ] table_name [, ...]
+                    | ALL TABLES IN SCHEMA schema_name [, ...]
+                }
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT
+                {   { SELECT | INSERT | UPDATE | REFERENCES } ( column_name [, ...] ) [, ...]
+                    | ALL [ PRIVILEGES ] ( column_name [, ...] )
+                } ON
+                    [ TABLE ] table_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT
+                {   { USAGE | SELECT | UPDATE } [, ...]
+                    | ALL [ PRIVILEGES ]
+                } ON
+                {   SEQUENCE sequence_name [, ...]
+                    | ALL SEQUENCES IN SCHEMA schema_name [, ...]
+                }
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT
+                {   { CREATE | CONNECT | TEMPORARY | TEMP } [, ...]
+                    | ALL [ PRIVILEGES ]
+                } ON
+                    DATABASE database_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { USAGE | ALL [ PRIVILEGES ] }
+                ON  DOMAIN domain_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { USAGE | ALL [ PRIVILEGES ] }
+                ON  FOREIGN DATA WRAPPER fdw_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { USAGE | ALL [ PRIVILEGES ] }
+                ON  FOREIGN SERVER server_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { EXECUTE | ALL [ PRIVILEGES ] }
+                ON {
+                    { FUNCTION | PROCEDURE | ROUTINE } routine_name [ ( [ [ argmode ] [ arg_name ] arg_type [, ...] ] ) ] [, ...]
+                    | ALL { FUNCTIONS | PROCEDURES | ROUTINES } IN SCHEMA schema_name [, ...]
+                }
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { USAGE | ALL [ PRIVILEGES ] }
+                ON  LANGUAGE lang_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT
+                {   { SELECT | UPDATE } [, ...]
+                    | ALL [ PRIVILEGES ]
+                }
+                ON  LARGE OBJECT loid [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT
+                {   { CREATE | USAGE } [, ...]
+                    | ALL [ PRIVILEGES ]
+                }
+                ON  SCHEMA schema_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { CREATE | ALL [ PRIVILEGES ] }
+                ON  TABLESPACE tablespace_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT   { USAGE | ALL [ PRIVILEGES ] }
+                ON  TYPE type_name [, ...]
+                TO role_specification [, ...] [ WITH GRANT OPTION ]
+            GRANT role_name [, ...]
+                TO role_specification [, ...]
+                [ WITH ADMIN OPTION ]
+                [ GRANTED BY role_specification ]
+            grant on database objects
+                gives specific privileges on database object to one or more roles
+            grant on roles
+        IMPORT FOREIGN SCHEMA — import table definitions from a foreign server
+        INSERT — create new rows in a table
+            [ WITH [ RECURSIVE ] with_query [, ...] ]
+            INSERT INTO table_name [ AS alias ] [ ( column_name [, ...] ) ]
+                [ OVERRIDING { SYSTEM | USER } VALUE ]
+                {     DEFAULT VALUES
+                    | VALUES ( { expression | DEFAULT } [, ...] ) [, ...]
+                    | query
+                }
+                [ ON CONFLICT [ conflict_target ] conflict_action ]
+                [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+            conflict_target := oneof
+                ( { index_column_name | ( index_expression ) } [ COLLATE collation ] [ opclass ] [, ...] )
+                    [ WHERE index_predicate ]
+                ON CONSTRAINT constraint_name
+            conflict_action := oneof
+                DO NOTHING
+                DO UPDATE SET { column_name = { expression | DEFAULT }
+                    | ( column_name [, ...] ) = [ ROW ] ( { expression | DEFAULT } [, ...] )
+                    | ( column_name [, ...] ) = ( sub-SELECT )
+                    } [, ...]
+                    [ WHERE condition ]
+            can insert zero rows if using a query that returns no rows
+            automatic type conversion will be attempted
+            ON CONFLICT clause
+                index_predicate relates to partial indexes column(s) might have
+                DO NOTHING
+                DO UPDATE -- upsert
+                    conflict_target must be specified
+                    guarantees atomic insert or update
+                    or errors
+                    existing row available under table name (or alias)
+                    proposed row available as EXCLUDED pseudo-row
+                    BEFORE INSERT triggers reflected in EXCLUDED pseudo-row
+                    WHERE only does update for matching condition
+                        evaluated last, after determined that INSERT might instead be UPDATE
+                    deterministic:  not allowed to affect any one row more than once
+        LISTEN — listen for a notification
+        LOAD — load a shared library file
+        LOCK — lock a table
+        MOVE — position a cursor
+        NOTIFY — generate a notification
+        PREPARE — prepare a statement for execution
+            PREPARE name [ ( data_type [, ...] ) ] AS statement
+            server-side object
+            only last for session
+            parameters by position, e.g. $1 $2
+            types not given, or `unknown`, are inferred from statement
+            SELECT, INSERT, UPDATE, DELETE
+            generic plan
+                only used after 5 executions where generic plan is cheaper
+                assumes that each param is distinct value, and uniformly distributed
+            see also EXECUTE, DEALLOCATE
+        PREPARE TRANSACTION — prepare the current transaction for two-phase commit
+            PREPARE TRANSACTION transaction_id
+            prepares tx for two-phase commit
+            tx is no longer associated with session
+            not intended for app use
+            intended for tx managers (across multiple systems)
+        REASSIGN OWNED — change the ownership of database objects owned by a database role
+        REFRESH MATERIALIZED VIEW — replace the contents of a materialized view
+            REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] name
+                [ WITH [ NO ] DATA ]
+        REINDEX — rebuild indexes
+            REINDEX [ ( VERBOSE ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } name
+            use when
+            - index becomes corrupt (software bugs, hardware failures)
+            - index becomes bloated (many empty or near-empty pages)
+            - index storage parameter altered
+            - index build with CONCURRENTLY failed
+            INDEX name -- recreates index
+            TABLE name -- recreates all indexes on table (inc toast tables)
+            SCHEMA name -- recreates all indexes in schema (inc toast tables)
+            corrupt system indexes might be tricky/suspect to reindex
+            similar to drop and recreate of index
+                locking different, REINDEX locks out writes and index reads, allows reads of underlying table
+            reindexing partitioned tables or partitioned indexes not supported
+                each individual partition can be reindexed separately instead
+        RELEASE SAVEPOINT — destroy a previously defined savepoint
+        RESET — restore the value of a run-time parameter to the default value
+            RESET configuration_parameter
+                same as SET configuration_parameter TO DEFAULT
+            RESET ALL
+        REVOKE — remove access privileges
+            REVOKE [ GRANT OPTION FOR ]
+                { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER } [, ...] | ALL [ PRIVILEGES ] }
+                ON { [ TABLE ] table_name [, ...] | ALL TABLES IN SCHEMA schema_name [, ...] }
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { { SELECT | INSERT | UPDATE | REFERENCES } ( column_name [, ...] ) [, ...] | ALL [ PRIVILEGES ] ( column_name [, ...] ) }
+                ON [ TABLE ] table_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { { USAGE | SELECT | UPDATE } [, ...] | ALL [ PRIVILEGES ] }
+                ON { SEQUENCE sequence_name [, ...] | ALL SEQUENCES IN SCHEMA schema_name [, ...] }
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { { CREATE | CONNECT | TEMPORARY | TEMP } [, ...] | ALL [ PRIVILEGES ] }
+                ON DATABASE database_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { USAGE | ALL [ PRIVILEGES ] }
+                ON DOMAIN domain_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { USAGE | ALL [ PRIVILEGES ] }
+                ON FOREIGN DATA WRAPPER fdw_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { USAGE | ALL [ PRIVILEGES ] }
+                ON FOREIGN SERVER server_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { EXECUTE | ALL [ PRIVILEGES ] }
+                ON { { FUNCTION | PROCEDURE | ROUTINE } function_name [ ( [ [ argmode ] [ arg_name ] arg_type [, ...] ] ) ] [, ...]
+                    | ALL { FUNCTIONS | PROCEDURES | ROUTINES } IN SCHEMA schema_name [, ...] }
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { USAGE | ALL [ PRIVILEGES ] }
+                ON LANGUAGE lang_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { { SELECT | UPDATE } [, ...] | ALL [ PRIVILEGES ] }
+                ON LARGE OBJECT loid [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { { CREATE | USAGE } [, ...] | ALL [ PRIVILEGES ] }
+                ON SCHEMA schema_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { CREATE | ALL [ PRIVILEGES ] }
+                ON TABLESPACE tablespace_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ GRANT OPTION FOR ]
+                { USAGE | ALL [ PRIVILEGES ] }
+                ON TYPE type_name [, ...]
+                FROM role_specification [, ...] [ CASCADE | RESTRICT ]
+            REVOKE [ ADMIN OPTION FOR ]
+                role_name [, ...] FROM role_specification [, ...]
+                [ GRANTED BY role_specification ] [ CASCADE | RESTRICT ]
+        ROLLBACK — abort the current transaction
+            ROLLBACK [ WORK | TRANSACTION ]
+        ROLLBACK PREPARED — cancel a transaction that was earlier prepared for two-phase commit
+            ROLLBACK PREPARED transaction_id
+        ROLLBACK TO SAVEPOINT — roll back to a savepoint
+        SAVEPOINT — define a new savepoint within the current transaction
+        SECURITY LABEL — define or change a security label applied to an object
+        SELECT — retrieve rows from a table or view
+            [ WITH [ RECURSIVE ] with_query [, ...] ]
+            SELECT [ ALL | DISTINCT [ ON ( expression [, ...] ) ] ]
+                [ * | expression [ [ AS ] output_name ] [, ...] ]
+                [ FROM from_item [, ...] ]
+                [ WHERE condition ]
+                [ GROUP BY grouping_element [, ...] ]
+                [ HAVING condition [, ...] ]
+                [ WINDOW window_name AS ( window_definition ) [, ...] ]
+                [ { UNION | INTERSECT | EXCEPT } [ ALL | DISTINCT ] select ]
+                [ ORDER BY expression [ ASC | DESC | USING operator ] [ NULLS { FIRST | LAST } ] [, ...] ]
+                [ LIMIT { count | ALL } ]
+                [ OFFSET start [ ROW | ROWS ] ]
+                [ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY ]
+                [ FOR { UPDATE | NO KEY UPDATE | SHARE | KEY SHARE } [ OF table_name [, ...] ] [ NOWAIT | SKIP LOCKED ] [...] ]
+            from_item := oneof
+                [ ONLY ] table_name [ * ]
+                    [ [ AS ] alias [ ( column_alias [, ...] ) ] ]
+                    [ TABLESAMPLE sampling_method ( argument [, ...] ) [ REPEATABLE ( seed ) ] ]
+                [ LATERAL ] ( select )
+                    [ AS ] alias [ ( column_alias [, ...] ) ]
+                with_query_name
+                    [ [ AS ] alias [ ( column_alias [, ...] ) ] ]
+                [ LATERAL ] function_name ( [ argument [, ...] ] ) [ WITH ORDINALITY ]
+                    [ [ AS ] alias [ ( column_alias [, ...] ) ] ]
+                [ LATERAL ] function_name ( [ argument [, ...] ] )
+                    [ AS ] alias ( column_definition [, ...] )
+                [ LATERAL ] function_name ( [ argument [, ...] ] )
+                    AS ( column_definition [, ...] )
+                [ LATERAL ] ROWS FROM(
+                        function_name ( [ argument [, ...] ] )
+                        [ AS ( column_definition [, ...] ) ] [, ...]
+                    )
+                    [ WITH ORDINALITY ]
+                    [ [ AS ] alias [ ( column_alias [, ...] ) ] ]
+                from_item [ NATURAL ] join_type from_item
+                    [ ON join_condition | USING ( join_column [, ...] ) ]
+            grouping_element := oneof
+                ( )
+                expression
+                ( expression [, ...] )
+                ROLLUP ( { expression | ( expression [, ...] ) } [, ...] )
+                CUBE ( { expression | ( expression [, ...] ) } [, ...] )
+                GROUPING SETS ( grouping_element [, ...] )
+            with_query :=
+                with_query_name [ ( column_name [, ...] ) ] AS ( select | values | insert | update | delete )
+            process
+                1. WITH queries computed, each only once, serve as temporary tables
+                2. each element in FROM computed, cross-joined
+                3. WHERE clause evaluated, possibly eliminating rows
+                4. if GROUP BY or aggregate functions, output combined into groups of rows, aggregates computed
+                    HAVING clause evaluated, possibly eliminating rows
+                5. output rows computed using output expressions
+                6. SELECT DISTINCT eliminates duplicate rows
+                7. UNION, INTERSECT, EXCEPT merges output of multiple selects
+                8. ORDER BY evaluated
+                9. LIMIT and/or OFFSET evaluated
+                10. if FOR UPDATE, FOR NO KEY UPDATE, FOR SHARE, or FOR KEY SHARE, rows locked
+            WITH clause
+                specify one-or-more subqueries to reference in primary query
+                effectively act as temp tables
+                only evaluated once per execution of primary query
+                SELECT, TABLE, VALUES, INSERT, UPDATE, or DELETE
+                RECURSIVE has the form := non_recursive_term UNION [ ALL | DISTINCT ] recursive_term
+                effects of data-modifying subqueries cannot be seen from primary or other subqueries
+                    except for RETURNING output
+            FROM clause
+                if multiple sources, result is cross join
+                tablesample
+                    BERNOULLI
+                        samples rows
+                        single arg 0-100 (percent)
+                        seed := non-null floating point
+                    SYSTEM
+                        samples storage blocks
+                        single arg 0-100 (percent)
+                        seed := non-null floating point
+                select
+                    acts as temp table
+                    must be surrounded by parens
+                    must have an alias
+                function calls
+                    especially useful for funcs which return result sets
+                    acts as temp table
+                    WITH ORDINALITY
+                        adds column with numbers for each row
+                    ROWS FROM
+                        concat columns from multiple funcs
+                        total number of rows is max number of rows
+                        NULLs filled in for funcs which return fewer rows
+                    funcs which return `record` type must have alias with col defs
+                join_type := oneof
+                    [ INNER ] JOIN
+                    LEFT [ OUTER ] JOIN
+                    RIGHT [ OUTER ] JOIN
+                    FULL [ OUTER ] JOIN
+                    CROSS JOIN
+                must have join condition for INNER and OUTER, oneof
+                    NATURAL
+                    ON join_condition
+                    USING (join_column [, ...])
+                CROSS JOIN and INNER JOIN produce cartesian product
+                    CROSS JOIN := INNER JOIN ... ON (TRUE)
+                LEFT OUTER JOIN
+                    all rows in cartesian product that match join condition
+                    plus one copy of each row in lefthand table when no righthand table matches condition
+                    NULLs used for righthand table
+                    only join condition evaluated for this
+                RIGHT OUTER JOIN
+                    all rows in cartesian product that match join condition
+                    plus one copy of each row in righthand table when no lefthand table matches condition
+                    NULLs used for lefthand table
+                    only join condition evaluated for this
+                FULL OUTER JOIN
+                    all rows
+                    plus one row for each unmatched lefthand row
+                    plus one row for each unmatched righthand row
+                NATURAL
+                    equivalent to USING that lists all cols with same name in both tables
+                LATERAL
+                    preceeds a subselect
+                    allows subselect to reference cols in items before it in FROM list
+            GROUP BY clause
+                condenses into a single row all selected rows that have the same value
+                expr in grouping_element can be
+                    input col name
+                    name or ordinal position of output col
+                    expr using input col name
+                    if ambiguity between input and output col names, input used
+                GROUPING SETS, ROLLUP, or CUBE
+                    GROUP BY defines independent "grouping sets"
+                agg funcs
+                    computed across all rows that make up group
+                    produces separate value for each group
+                    set of rows fed to agg func can be restricted using FILTER clause
+            HAVING clause
+                eliminates group rows that don't satisfy condition
+                turns query into a grouped query (even if no GROUP BY)
+            WINDOW clause
+                https://www.postgresql.org/docs/11/sql-select.html#SQL-WINDOW
+            SELECT list
+                using AS means no confusion with keywords (so no double-quoting is needed)
+                output col names can be referred to in ORDER BY and GROUP BY
+                output col names cannot be referred to in WHERE or HAVING
+            DISTINCT clause
+                only one of each duplicate row is included in result set
+                DISTINCT ON (expr[,...])
+                    result of expression determines duplication
+                    uses same roles as ORDER BY
+                    must match leftmost ORDER BY expr(s)
+            UNION clause
+                select_statement UNION [ ALL | DISTINCT ] select_statement
+                select_statement can't have ORDER BY, LIMIT, or locking
+                    put parens around SELECT to use ORDER BY or LIMIT
+                results in set union of rows
+                subselects must produce same number of cols, with compatible types
+                use ALL to return all rows (w/out dupes removed)
+                    quicker too
+            INTERSECT clause
+                select_statement INTERSECT [ ALL | DISTINCT ] select_statement
+                select_statement can't have ORDER BY, LIMIT, or locking
+                returns set intersection of rows
+                ALL
+                    returns min(m,n) duplicate rows
+                INTERSET binds more tightly than UNION
+            EXCEPT clause
+                select_statement EXCEPT [ ALL | DISTINCT ] select_statement
+                select_statement can't have ORDER BY, LIMIT, or locking
+                returns rows in left set but not in right
+                ALL
+                    returns max(m-n,0) duplicate rows
+                EXCEPT binds at same level as UNION
+            ORDER BY clause
+                sorts result rows
+                expr
+                    name or ordinal position of output col
+                    can also be arbitrary expr, referencing input col names
+                        but not from UNION, INTERSECT, or EXCEPT
+                    if ambiguity between input and output col names, output used
+                ASC is default
+                default NULLS LAST when ASC
+                default NULLS FIRST when DESC
+            LIMIT and OFFSET clause
+                if count is NULL, treated as ALL
+                if start is NULL, treated as 0
+                good idea to use ORDER BY
+                query planner takes LIMIT into consideration, to help optimize
+            locking clause
+                https://www.postgresql.org/docs/11/sql-select.html#SLQ-FOR-UPDATE-SHARE
+        SELECT INTO — define a new table from the results of a query
+            use CREATE TABLE AS instead
+        SET — change a run-time parameter
+            SET [ SESSION | LOCAL ] configuration_parameter { TO | = } { value | 'value' | DEFAULT }
+            SET [ SESSION | LOCAL ] TIME ZONE { timezone | LOCAL | DEFAULT }
+            SET SCHEMA 'value' -- alias for SET search_path TO value
+            SET TIME ZONE value -- alias for SET timezone TO value
+            SESSION := affects current tx, rolled back on ROLLBACK
+            LOCAL := affects current tx, rolled back on COMMIT or ROLLBACK
+            see also set_config()
+        SET CONSTRAINTS — set constraint check timing for the current transaction
+            SET CONSTRAINTS { ALL | name [, ...] } { DEFERRED | IMMEDIATE }
+            only UNIQUE, PRIMARY KEY, REFERENCES, EXCLUDE constraints affected by this setting
+            NOT NULL and CHECK constraints always checked immediately
+            uniqueness and exclusion constraints that have not been declared DEFERRABLE also checked immediately
+        SET ROLE — set the current user identifier of the current session
+            SET [ SESSION | LOCAL ] ROLE role_name
+            SET [ SESSION | LOCAL ] ROLE NONE
+            RESET ROLE
+            SESSION := affects current tx, rolled back on ROLLBACK
+            LOCAL := affects current tx, rolled back on COMMIT or ROLLBACK
+            when a superuser chooses to SET ROLE to a non-superuser role, they lose their superuser privileges
+            SET ROLE does not process session variables as specified by the role's ALTER ROLE settings; this only happens during login
+        SET SESSION AUTHORIZATION — set the session user identifier and the current user identifier of the current session
+        SET TRANSACTION — set the characteristics of the current transaction
+            SET TRANSACTION transaction_mode [, ...]
+            SET TRANSACTION SNAPSHOT snapshot_id
+            SET SESSION CHARACTERISTICS AS TRANSACTION transaction_mode [, ...]
+            transaction_mode := oneof
+                    ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED }
+                    READ WRITE | READ ONLY
+                    [ NOT ] DEFERRABLE
+            good for reporting:  DEFERRABLE, SERIALIZABLE, READ ONLY
+        SHOW — show the value of a run-time parameter
+            SHOW name
+            SHOW ALL
+        START TRANSACTION — start a transaction block
+            START TRANSACTION [ transaction_mode [, ...] ]
+            transaction_mode := oneof
+                    ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED }
+                    READ WRITE | READ ONLY
+                    [ NOT ] DEFERRABLE
+        TABLE — select all of a table
+            TABLE [ ONLY ] table_name [ * ]
+            WITH, UNION, INTERSECT, EXCEPT, ORDER BY, LIMIT, OFFSET, FETCH and FOR locking clauses can be used
+        TRUNCATE — empty a table or set of tables
+            TRUNCATE [ TABLE ] [ ONLY ] name [ * ] [, ... ]
+                [ RESTART IDENTITY | CONTINUE IDENTITY ] [ CASCADE | RESTRICT ]
+            access exclusive lock
+            can't be used on tables with fk references, unless those too are trunc'd in same command
+            won't fire ON DELETE triggers
+            will fire ON TRUNCATE triggers
+            transaction safe, not MVCC-safe
+        UNLISTEN — stop listening for a notification
+        UPDATE — update rows of a table
+            [ WITH [ RECURSIVE ] with_query [, ...] ]
+            UPDATE [ ONLY ] table_name [ * ] [ [ AS ] alias ]
+                SET {   column_name = { expression | DEFAULT }
+                    | ( column_name [, ...] ) = [ ROW ] ( { expression | DEFAULT } [, ...] )
+                    | ( column_name [, ...] ) = ( sub-SELECT )
+                } [, ...]
+                [ FROM from_item [, ...] ]
+                [ WHERE condition | WHERE CURRENT OF cursor_name ]
+                [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+            from_item := same syntax as SELECT FROM ...
+            columns not mentioned retain their previous values
+        VACUUM — garbage-collect and optionally analyze a database
+            VACUUM [ ( option [, ...] ) ] [ table_and_columns [, ...] ]
+            VACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ ANALYZE ] [ table_and_columns [, ...] ]
+            option := oneof FULL FREEZE VERBOSE ANALYZE DISABLE_PAGE_SKIPPING
+            FULL uses exclusive lock
+            prod dbs should vacuum frequently
+        VALUES — compute a set of rows
+            VALUES ( expression [, ...] ) [, ...]
+                [ ORDER BY sort_expression [ ASC | DESC | USING operator ] [, ...] ]
+                [ LIMIT { count | ALL } ]
+                [ OFFSET start [ ROW | ROWS ] ]
+                [ FETCH { FIRST | NEXT } [ count ] { ROW | ROWS } ONLY ]
+            allowed anywhere that SELECT is
+            when used in INSERT, expression can be DEFAULT
+            large VALUES command can be expensive, except in INSERT where it's cheaper
+    clients reference
+        pg_dump -- extract a PostgreSQL database into a script file or other archive file
+            pg_dump [connection-option...] [option...] [dbname]
+            does not block other users (readers or writers)
+            only dumps single database
+            formats
+                script -- plain text of SQL commands
+                archive -- must use pg_restore to load
+                both are portable
+            examine both for warnings
+            --data-only
+            --blobs                     [default, mostly]
+            --no-blobs                  [default when --schema or --table or --schema-only]
+            --file={path}
+                used with --format=directory to specify a directory, which must not yet exist
+            --format={format}
+                plain -- plain text SQL commands
+                custom -- archive format for feeding into pg_restore
+                directory -- archive format for feeding into pg_restore, one file for each table and blob, and TOC
+                tar -- tarred format=directory
+            --schema={pattern}          [repeatable] [causes --no-blobs]
+            --exclude-schema={pattern}  [repeatable]
+                can exclude schema added by --schema
+            --no-owner                  [only --format=plain]
+                don't output commands to change ownership
+            --schema-only               [causes --no-blobs]
+                dump object definition but not data
+            --table={pattern}           [repeatable] [causes --no-blobs]
+                foreign tables, materialized views, sequences, tables, views,
+                overrides --schema and --exclude-schema
+            --exclude-table={pattern}   [repeatable]
+                can exclude tables added by --table
+            --verbose
+            --no-privileges
+                prevent dumping of access privileges
+            --column-inserts
+            --attribute-inserts
+                dump INSERTs with explicit column names
+                dump one INSERT per row
+                make restores slow
+            --disable-triggers          [only --format=plain] [only with --data-only]
+                extra emitted commands must be run as superuser
+            --exclude-table-data={pattern}
+            --if-exists                 [only with --clean]
+            --inserts
+                dump data as INSERTs rather than COPY
+                dump one INSERT per row
+                make restores slow
+            --quote-all-identifiers
+            --section={section}         [repeatable]
+                pre-data -- all data definitions except those found in post-data
+                data -- actual table data, large object contents, sequence values
+                post-data -- definitions of indexes, triggers, rules, constraints other than validated check constraints
+            --serializable-deferrable
+                use tx with most careful isolation level
+        pg_restore -- restore a PostgreSQL database from an archive file created by pg_dump
+            pg_restore [connection-option...] [option...] [file]
+            --data-only
+            --clean
+                drop database objects before restoring them
+            --dbname={dbname}
+                connect to and restore into that database
+            --exit-on-error
+            --file={path}
+            --format={format}
+                not necessary, since pg_restore can figure out what pg_dump used
+            --index={name}              [repeatable]
+                return only named index
+            --list
+                list the TOC of the archive
+                each output item can be give to --use-list={item}
+            --use-list={item}           [repeatable]
+                restore only that item, from the list in the TOC
+            --schema={schema]           [repeatable]
+                restore only that schema
+            --exclude-schema={schema]   [repeatable]
+                can exclude schema added by --schema
+            --no-owner
+            --schema-only
+            --table={table}             [repeatable]
+                foreign tables, materialized views, sequences, tables, views,
+            --trigger={name}            [repeatable]
+                restore only that trigger
+            --verbose
+            --no-privileges
+                prevent restoring of access privileges
+            --single-transaction
+            --disable-triggers
+                only for data-only restores (--data-only or --section=data)
+            --if-exists                 [only with --clean]
+            --no-comments
+            --no-data-for-failed-tables
+            --section={section}         [repeatable]
+                see equivalent option of pg_dump
+            --strict-names
+        psql -- interactive terminal
+            psql [option...] [dbname [username]]
+            --echo-all
+            --no-align
+            --echo-errors
+            -c {command}                [repeatable]
+            --command={command}         [repeatable]
+                server-parseable SQL string or single backslash psql command
+                each command is sent to server separately, thus its own tx, unless explicit BEGIN/COMMIT
+                can be repeated with --file as well
+            --dbname={name}
+            --file={path}               [repeatable]
+                read commands from file
+                can be repeated with --command as well
+            --list
+                list available databases then quit
+            --log-file={path}
+                also write query output to file
+            --no-readline
+            --output={path}
+                put all query output to file
+            --pset={assignment}         [repeatable]
+                like \pset command
+                separate name and value with equal sign
+            --quiet
+                don't output welcome message etc
+            --tuples-only
+                turn off printing of column names and result row count footer
+            --set={assignment}          [repeatable]
+                like \set command
+                separate name and value with equal sign
+                to unset, leave off equal sign
+            --no-password
+                never prompt for a password
+            --password
+                force prompt for a password
+            --expanded
+            --no-psqlrc
+                don't read startup file (~/.psqlrc)
+            --single-transaction        [only with --command or --file]
+                execute all commands in a single tx
+            \if {expr}
+                SELECT EXISTS(SELECT ...) AS foo \gset
+                \if :foo
+    error codes
+        all messages are assigned 5char error codes
+            follows standard SQLSTATE conventions
+        apps should test the error code
+        first two chars denotes class
+        class 00 — Successful Completion
+            00000   successful_completion
+        class 01 — Warning
+            01000   warning
+            0100C   dynamic_result_sets_returned
+            01008   implicit_zero_bit_padding
+            01003   null_value_eliminated_in_set_function
+            01007   privilege_not_granted
+            01006   privilege_not_revoked
+            01004   string_data_right_truncation
+            01P01   deprecated_feature
+        class 02 — No Data (this is also a warning class per the SQL standard)
+            02000   no_data
+            02001   no_additional_dynamic_result_sets_returned
+        class 03 — SQL Statement Not Yet Complete
+            03000   sql_statement_not_yet_complete
+        class 08 — Connection Exception
+            08000   connection_exception
+            08003   connection_does_not_exist
+            08006   connection_failure
+            08001   sqlclient_unable_to_establish_sqlconnection
+            08004   sqlserver_rejected_establishment_of_sqlconnection
+            08007   transaction_resolution_unknown
+            08P01   protocol_violation
+        class 09 — Triggered Action Exception
+            09000   triggered_action_exception
+        class 0A — Feature Not Supported
+            0A000   feature_not_supported
+        class 0B — Invalid Transaction Initiation
+            0B000   invalid_transaction_initiation
+        class 0F — Locator Exception
+            0F000   locator_exception
+            0F001   invalid_locator_specification
+        class 0L — Invalid Grantor
+            0L000   invalid_grantor
+            0LP01   invalid_grant_operation
+        class 0P — Invalid Role Specification
+            0P000   invalid_role_specification
+        class 0Z — Diagnostics Exception
+            0Z000   diagnostics_exception
+            0Z002   stacked_diagnostics_accessed_without_active_handler
+        class 20 — Case Not Found
+            20000   case_not_found
+        class 21 — Cardinality Violation
+            21000   cardinality_violation
+        class 22 — Data Exception
+            22000   data_exception
+            2202E   array_subscript_error
+            22021   character_not_in_repertoire
+            22008   datetime_field_overflow
+            22012   division_by_zero
+            22005   error_in_assignment
+            2200B   escape_character_conflict
+            22022   indicator_overflow
+            22015   interval_field_overflow
+            2201E   invalid_argument_for_logarithm
+            22014   invalid_argument_for_ntile_function
+            22016   invalid_argument_for_nth_value_function
+            2201F   invalid_argument_for_power_function
+            2201G   invalid_argument_for_width_bucket_function
+            22018   invalid_character_value_for_cast
+            22007   invalid_datetime_format
+            22019   invalid_escape_character
+            2200D   invalid_escape_octet
+            22025   invalid_escape_sequence
+            22P06   nonstandard_use_of_escape_character
+            22010   invalid_indicator_parameter_value
+            22023   invalid_parameter_value
+            22013   invalid_preceding_or_following_size
+            2201B   invalid_regular_expression
+            2201W   invalid_row_count_in_limit_clause
+            2201X   invalid_row_count_in_result_offset_clause
+            2202H   invalid_tablesample_argument
+            2202G   invalid_tablesample_repeat
+            22009   invalid_time_zone_displacement_value
+            2200C   invalid_use_of_escape_character
+            2200G   most_specific_type_mismatch
+            22004   null_value_not_allowed
+            22002   null_value_no_indicator_parameter
+            22003   numeric_value_out_of_range
+            2200H   sequence_generator_limit_exceeded
+            22026   string_data_length_mismatch
+            22001   string_data_right_truncation
+            22011   substring_error
+            22027   trim_error
+            22024   unterminated_c_string
+            2200F   zero_length_character_string
+            22P01   floating_point_exception
+            22P02   invalid_text_representation
+            22P03   invalid_binary_representation
+            22P04   bad_copy_file_format
+            22P05   untranslatable_character
+            2200L   not_an_xml_document
+            2200M   invalid_xml_document
+            2200N   invalid_xml_content
+            2200S   invalid_xml_comment
+            2200T   invalid_xml_processing_instruction
+        class 23 — Integrity Constraint Violation
+            23000   integrity_constraint_violation
+            23001   restrict_violation
+            23502   not_null_violation
+            23503   foreign_key_violation
+            23505   unique_violation
+            23514   check_violation
+            23P01   exclusion_violation
+        class 24 — Invalid Cursor State
+            24000   invalid_cursor_state
+        class 25 — Invalid Transaction State
+            25000   invalid_transaction_state
+            25001   active_sql_transaction
+            25002   branch_transaction_already_active
+            25008   held_cursor_requires_same_isolation_level
+            25003   inappropriate_access_mode_for_branch_transaction
+            25004   inappropriate_isolation_level_for_branch_transaction
+            25005   no_active_sql_transaction_for_branch_transaction
+            25006   read_only_sql_transaction
+            25007   schema_and_data_statement_mixing_not_supported
+            25P01   no_active_sql_transaction
+            25P02   in_failed_sql_transaction
+            25P03   idle_in_transaction_session_timeout
+        class 26 — Invalid SQL Statement Name
+            26000   invalid_sql_statement_name
+        class 27 — Triggered Data Change Violation
+            27000   triggered_data_change_violation
+        class 28 — Invalid Authorization Specification
+            28000   invalid_authorization_specification
+            28P01   invalid_password
+        class 2B — Dependent Privilege Descriptors Still Exist
+            2B000   dependent_privilege_descriptors_still_exist
+            2BP01   dependent_objects_still_exist
+        class 2D — Invalid Transaction Termination
+            2D000   invalid_transaction_termination
+        class 2F — SQL Routine Exception
+            2F000   sql_routine_exception
+            2F005   function_executed_no_return_statement
+            2F002   modifying_sql_data_not_permitted
+            2F003   prohibited_sql_statement_attempted
+            2F004   reading_sql_data_not_permitted
+        class 34 — Invalid Cursor Name
+            34000   invalid_cursor_name
+        class 38 — External Routine Exception
+            38000   external_routine_exception
+            38001   containing_sql_not_permitted
+            38002   modifying_sql_data_not_permitted
+            38003   prohibited_sql_statement_attempted
+            38004   reading_sql_data_not_permitted
+        class 39 — External Routine Invocation Exception
+            39000   external_routine_invocation_exception
+            39001   invalid_sqlstate_returned
+            39004   null_value_not_allowed
+            39P01   trigger_protocol_violated
+            39P02   srf_protocol_violated
+            39P03   event_trigger_protocol_violated
+        class 3B — Savepoint Exception
+            3B000   savepoint_exception
+            3B001   invalid_savepoint_specification
+        class 3D — Invalid Catalog Name
+            3D000   invalid_catalog_name
+        class 3F — Invalid Schema Name
+            3F000   invalid_schema_name
+        class 40 — Transaction Rollback
+            40000   transaction_rollback
+            40002   transaction_integrity_constraint_violation
+            40001   serialization_failure
+            40003   statement_completion_unknown
+            40P01   deadlock_detected
+        class 42 — Syntax Error or Access Rule Violation
+            42000   syntax_error_or_access_rule_violation
+            42601   syntax_error
+            42501   insufficient_privilege
+            42846   cannot_coerce
+            42803   grouping_error
+            42P20   windowing_error
+            42P19   invalid_recursion
+            42830   invalid_foreign_key
+            42602   invalid_name
+            42622   name_too_long
+            42939   reserved_name
+            42804   datatype_mismatch
+            42P18   indeterminate_datatype
+            42P21   collation_mismatch
+            42P22   indeterminate_collation
+            42809   wrong_object_type
+            428C9   generated_always
+            42703   undefined_column
+            42883   undefined_function
+            42P01   undefined_table
+            42P02   undefined_parameter
+            42704   undefined_object
+            42701   duplicate_column
+            42P03   duplicate_cursor
+            42P04   duplicate_database
+            42723   duplicate_function
+            42P05   duplicate_prepared_statement
+            42P06   duplicate_schema
+            42P07   duplicate_table
+            42712   duplicate_alias
+            42710   duplicate_object
+            42702   ambiguous_column
+            42725   ambiguous_function
+            42P08   ambiguous_parameter
+            42P09   ambiguous_alias
+            42P10   invalid_column_reference
+            42611   invalid_column_definition
+            42P11   invalid_cursor_definition
+            42P12   invalid_database_definition
+            42P13   invalid_function_definition
+            42P14   invalid_prepared_statement_definition
+            42P15   invalid_schema_definition
+            42P16   invalid_table_definition
+            42P17   invalid_object_definition
+        class 44 — WITH CHECK OPTION Violation
+            44000   with_check_option_violation
+        class 53 — Insufficient Resources
+            53000   insufficient_resources
+            53100   disk_full
+            53200   out_of_memory
+            53300   too_many_connections
+            53400   configuration_limit_exceeded
+        class 54 — Program Limit Exceeded
+            54000   program_limit_exceeded
+            54001   statement_too_complex
+            54011   too_many_columns
+            54023   too_many_arguments
+        class 55 — Object Not In Prerequisite State
+            55000   object_not_in_prerequisite_state
+            55006   object_in_use
+            55P02   cant_change_runtime_param
+            55P03   lock_not_available
+        class 57 — Operator Intervention
+            57000   operator_intervention
+            57014   query_canceled
+            57P01   admin_shutdown
+            57P02   crash_shutdown
+            57P03   cannot_connect_now
+            57P04   database_dropped
+        class 58 — System Error (errors external to PostgreSQL itself)
+            58000   system_error
+            58030   io_error
+            58P01   undefined_file
+            58P02   duplicate_file
+        class 72 — Snapshot Failure
+            72000   snapshot_too_old
+        class F0 — Configuration File Error
+            F0000   config_file_error
+            F0001   lock_file_exists
+        class HV — Foreign Data Wrapper Error (SQL/MED)
+            HV000   fdw_error
+            HV005   fdw_column_name_not_found
+            HV002   fdw_dynamic_parameter_value_needed
+            HV010   fdw_function_sequence_error
+            HV021   fdw_inconsistent_descriptor_information
+            HV024   fdw_invalid_attribute_value
+            HV007   fdw_invalid_column_name
+            HV008   fdw_invalid_column_number
+            HV004   fdw_invalid_data_type
+            HV006   fdw_invalid_data_type_descriptors
+            HV091   fdw_invalid_descriptor_field_identifier
+            HV00B   fdw_invalid_handle
+            HV00C   fdw_invalid_option_index
+            HV00D   fdw_invalid_option_name
+            HV090   fdw_invalid_string_length_or_buffer_length
+            HV00A   fdw_invalid_string_format
+            HV009   fdw_invalid_use_of_null_pointer
+            HV014   fdw_too_many_handles
+            HV001   fdw_out_of_memory
+            HV00P   fdw_no_schemas
+            HV00J   fdw_option_name_not_found
+            HV00K   fdw_reply_handle
+            HV00Q   fdw_schema_not_found
+            HV00R   fdw_table_not_found
+            HV00L   fdw_unable_to_create_execution
+            HV00M   fdw_unable_to_create_reply
+            HV00N   fdw_unable_to_establish_connection
+        class P0 — PL/pgSQL Error
+            P0000   plpgsql_error
+            P0001   raise_exception
+            P0002   no_data_found
+            P0003   too_many_rows
+            P0004   assert_failure
+        class XX — Internal Error
+            XX000   internal_error
+            XX001   data_corrupted
+            XX002   index_corrupted
+    keywords
+        double-quote questionable identifiers
+        cannot be function or data type names
+            BETWEEN BIGINT BIT BOOLEAN CHAR CHARACTER COALESCE DEC DECIMAL
+            EXISTS EXTRACT FLOAT GREATEST GROUPING INOUT INT INTEGER INTERVAL
+            LEAST NATIONAL NCHAR NONE NULLIF NUMERIC OUT OVERLAY
+            POSITION PRECISION REAL ROW SETOF SMALLINT SUBSTRING
+            TIME TIMESTAMP TREAT TRIM VALUES VARCHAR
+            XMLATTRIBUTES XMLCONCAT XMLELEMENT XMLEXISTS XMLFOREST
+            XMLNAMESPACES XMLPARSE XMLPI XMLROOT XMLSERIALIZE XMLTABLE
+        cannot be table or column name
+            AUTHORIZATION BINARY COLLATION CONCURRENTLY CROSS CURRENT_SCHEMA
+            FREEZE FULL ILIKE INNER IS ISNULL JOIN LEFT LIKE NATURAL NOTNULL
+            OUTER OVERLAPS RIGHT SIMILAR TABLESAMPLE VERBOSE
+        cannot be either -- can only be used in AS column label name
+            ALL ANALYSE ANALYZE AND ANY ARRAY AS ASC ASYMMETRIC BOTH
+            CASE CAST CHECK COLLATE COLUMN CONSTRAINT CREATE CURRENT_CATALOG
+            CURRENT_DATE CURRENT_ROLE CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER
+            DEFAULT DEFERRABLE DESC DISTINCT DO ELSE END EXCEPT
+            FALSE FETCH FOR FOREIGN FROM GRANT GROUP HAVING IN INITIALLY INTERSECT INTO
+            LATERAL LEADING LIMIT LOCALTIME LOCALTIMESTAMP NOT NULL
+            OFFSET ON ONLY OR ORDER PLACING PRIMARY REFERENCES RETURNING
+            SELECT SESSION_USER SOME SYMMETRIC TABLE THEN TO TRAILING TRUE
+            UNION UNIQUE USER USING VARIADIC WHEN WHERE WINDOW WITH
+
+    pg_catalog
+        pg_attrdef -- column default values
+        pg_attribute -- table columns
+            attrelid pg_class.oid -- table
+            attname name -- column name
+            attnum int2 -- index in the table, starts with 1
+            attnotnull bool
+            attidentity char -- ' '=nope 'a'=always 'd'=default
+        pg_class -- tables, indexes, sequences, views
+            relname
+            relnamespace pg_namespace.oid -- schema name
+                relnamespace::regnamespace::text AS schema_name
+            relpages -- pages on disk (of size BLOCKSZ)
+            reltuples -- estimated number of live rows
+            relkind char --
+                r=table i=index s=sequence t=TOAST v=view m=materialized-view c=composite
+                f=foreign-table p=partitioned-table I=partitioned-index
+        pg_constraint
+            conname name -- constraint name
+            connamespace oid -- constraint schema
+            contype char -- 'c'=check 'f'=FK 'p'=PK 'u'=unique 't'=trigger 'x'=exclusion
+            conrelid pg_class.oid -- table
+            conindid pg_class.oid -- index, if contype in (f p u x)
+            confrelid pg_class.oid -- reference table, if contype=f
+            conkey int2[] pg_attribute.attnum -- constraint columns
+            confkey int2[] pg_attribute.attnum -- FK columns
+        pg_description
+            objoid oid -- the kind of object being described
+            classoid pg_class.oid -- (indirectly) the kind of object being described
+            objsubid int4 -- when classoid points to a table, the column number
+            description text
+        pg_index
+            indexrelid pg_class.oid -- entry into pg_class for index
+            indrelid pg_class.oid -- entry into pg_class for table this index applies to
+            indnatts int2 -- number of columns
+            indisunique bool
+            indisprimary bool
+            indkey ind2vector -- array of table column indexes
+        pg_inherits
+            SELECT inhrelid::regclass, inhparent::regclass FROM pg_catalog.pg_inherits
+
+

@@ -1,0 +1,273 @@
+
+
+
+NETWORKING
+    https://www.youtube.com/watch?v=hiKPPy584Mg
+    VPC -- virtual private cloud
+    IP ranges / CIDR ranges
+        default 172.31.0.0/16
+        other protected ranges 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+    VPC has a CIDR range
+        AZs are subnets of that
+    routing
+        routing table -- set of rules to say where to send packages
+        route table assigned to VPC
+    getting to internet
+        public subnet, also gets a public IP
+        IPW (internet gateway) -- connection to internet
+        route:  default route to inet (dest=0.0.0.0/0 target=igw_id)
+    private subnet
+        nat gateway -- one-way valve to internet
+            only allows responses to requests that come from the inside
+            lives in public subnet, private subnet routes to that
+    SECURITY
+        security group
+            distributed firewall
+            stateful (allows response to request that originates inside)
+            inbound rules
+            outbound rules
+        NACLs -- network access control list
+            very course grained
+            should be relatively short/simple
+            difference from security groups
+                SECURITY GROUP          NACL
+                instance level          subnet level
+                allow rules only        allow & deny rules
+                stateful                stateless
+                all rules evald         rules evald in order
+                    before decision
+                only to assocd insts    applies to whole subnet
+            neither filters traffic to/fron link-local addresses (or AWS-reserved IPv4 addresses)
+        flow logs
+            at VPC level, subnet level, instance level
+            output:  s3 bucket or cloudwatch logs
+            visibility
+            troubleshooting
+            analyzing traffic flows
+            only contains description of packet (not contents)
+            {interface} {src-ip} {dest-port} {src-port} {dest-port} {TODO} {TODO} {bytes} {TODO} {TODO} {ACCEPT,REJECT} {TODO:OK}
+    DNS in a VPC
+        DNS resolution -- public address & other things in VPC
+        DNS hostnames -- assign dns names to things in VPC
+    connecting VPCs
+        VPC peering
+            like a piece of fiber between VPCs
+            one-to-one between VPCs, cannot route "through" a VPC from-A-to-C
+            private IP
+            can be different accounts or regions
+            beware of CIDR ranges
+            also need to update routing tables on both sides
+        transit gateway
+            helps with combinatorial problem
+            routing service between a set of VPCs
+            has its own routing table
+            must be in the same region
+            can be in different accounts
+    connecting VPCs to on-prem
+        AWS VPN (site-to-site)
+            customer gateway
+                on-premise end of VPN connection
+            virtual private gateway
+                other side of VPN connection
+            two separate IPsec tunnels -- for two AZs
+            update routing table in VPC to tell it how to get to on-prem range
+            runs over internet
+        AWS Direct Connect
+            managed AWS services (which live outside of VPC)
+            we choose an AWS Direct Connect location
+            we make private VLAN into VPC or other AWS services
+        combinatorial problem with VPC peering & on-prem VPN
+            Transit Gateway helps with this
+        DNS
+            Route53 resolver endpoints
+            conditional forwarding rules
+    VPC sharing
+        normally:  all resources in VPC must belong to a single account
+        sharing addresses that
+        why?  fewer IPv4 CIDRs, lesser interconnect, separation of duties, simplified billing/mgmt
+    VPC endpoints and AWS PrivateLink
+        Gateway VPC endpoints
+            used -only- for S3 and DynamoDB
+            so don't need to use public IPs
+        Interface VPC endpoints
+            connect to AWS services
+            makes it look as if that service lives inside VPC
+            ... so local IP addr
+            override public domain name
+            Route53 can use this to resolve public service names to private endpoint
+                e.g. {service}.{region}.amazonws.com goes to endpoint
+        PrivateLink
+            for making your own services to share with customers
+            don't have to worry about IP conflicts
+    Amazon Global Accelerator
+        network-based service, tcp or udp
+        routes traffic through AWS-private backbone (instead of public net)
+    https://www.youtube.com/watch?v=wOMNpG49BeM
+        Reliability
+            Direct Connect (DX) or VPN
+            single-AZ
+                NAT gateway, instances, VPN servers, etc
+            so, use multiple AZs
+        Security
+            centralize egress
+            use private subnets
+            use PrivateLink (instead of over internet)
+        Performance Efficiency
+        Operational Excellence
+            automation
+            tagging
+            comfort with failure (test)
+            monitoring
+        Cost Optimization
+            large S3?  use VPC endpoint instead of NAT gateway
+            use private IPs instead of public
+            make services AZ-aware and don't cross AZ boundary
+            trim unused NAT gateways
+            review VPC flow logs (baseline, hot spots, anomalies)
+            reduce Transit Gateways
+
+
+ECR
+    AWS_PROFILE=remote-env
+    ECR_REGISTRY=347383665746.dkr.ecr.us-east-2.amazonaws.com
+    aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin $ECR_REGISTRY
+    docker image pull $ECR_REGISTRY/launch/course-service:3367ef028155dd9653715f52a711d31983672ba5
+
+
+EKS
+    get-token --cluster-name <cluster> [--role-arn <arn>]
+    tag-resource
+    update-kubeconfig
+    cluster
+        multiple AWs
+        fronted by ELB NLB
+        create-cluster
+        decribe-cluster
+        update-cluster-config
+        update-cluster-version
+        list-clusters
+        delete-cluster
+    nodegroup
+        create-nodegroup
+        describe-nodegroup
+        update-nodegroup-config
+        update-nodegroup-version
+        list-nodegroups
+        delete-nodegroup
+    list-updates
+        describe-update
+
+
+CLOUDFORMATION
+
+    create
+        validate-template
+            [--template-body <value>]
+            [--template-url <value>]
+            [--cli-input-json <value>]
+            [--generate-cli-skeleton <value>]
+        package
+            upload local resources to AWS (mainly S3)
+            returns copy of template with resource references replaced
+            AWS::Include Location
+            AWS::ElasticBeanstalk::Application-Version SourceBundle
+            --template-file <value>
+            --s3-bucket <value>
+            [--s3-prefix <value>]
+            [--kms-key-id <value>]
+            [--output-template-file <value>]
+            [--use-json]
+            [--force-upload]
+            [--metadata <value>]
+        deploy
+            --template-file <value>
+            --stack-name <value>
+            [--s3-bucket <value>]
+            [--force-upload]
+            [--s3-prefix <value>]
+            [--kms-key-id <value>]
+            [--parameter-overrides <value> [<value>...]]
+            [--capabilities <value> [<value>...]]
+            [--no-execute-changeset]
+            [--role-arn <value>]
+            [--notification-arns <value> [<value>...]]
+            [--fail-on-empty-changeset | --no-fail-on-empty-changeset]
+            [--tags <value> [<value>...]]
+        ...or perhaps...
+        create-stack
+            --stack-name <value>
+            [--template-body <value>]
+            [--template-url <value>]
+            [--parameters <value>]
+            [--disable-rollback | --no-disable-rollback]
+            [--rollback-configuration <value>]
+            [--timeout-in-minutes <value>]
+            [--notification-arns <value>]
+            [--capabilities <value>]
+            [--resource-types <value>]
+            [--role-arn <value>]
+            [--on-failure <value>]
+            [--stack-policy-body <value>]
+            [--stack-policy-url <value>]
+            [--tags <value>]
+            [--client-request-token <value>]
+            [--enable-termination-protection | --no-enable-termination-protection]
+            [--cli-input-json <value>]
+            [--generate-cli-skeleton <value>]
+
+    list
+        list-stacks
+            [--stack-status-filter <value>]
+            [--cli-input-json <value>]
+            [--starting-token <value>]
+            [--max-items <value>]
+            [--generate-cli-skeleton <value>]
+
+    info {name}
+        describe-stacks
+            [--stack-name <value>]
+            [--cli-input-json <value>]
+            [--starting-token <value>]
+            [--max-items <value>]
+            [--generate-cli-skeleton <value>]
+            returns
+                status & reason
+                parameters
+                outputs
+                tags
+        describe-stack-events
+            [--stack-name <value>]
+            [--cli-input-json <value>]
+            [--starting-token <value>]
+            [--max-items <value>]
+            [--generate-cli-skeleton <value>]
+        describe-stack-resources
+            [--stack-name <value>]
+            [--logical-resource-id <value>]
+            [--physical-resource-id <value>]
+            [--cli-input-json <value>]
+            [--generate-cli-skeleton <value>]
+
+    delete {name}
+        delete-stack
+            --stack-name <value>
+            [--retain-resources <value>]
+            [--role-arn <value>]
+            [--client-request-token <value>]
+            [--cli-input-json <value>]
+            [--generate-cli-skeleton <value>]
+
+    ...others...
+        set-stack-policy
+            limit operations for special-use stacks
+        wait <condition>
+            stack-create-complete
+            stack-delete-complete
+            stack-exists
+
+    ...for stack sets...
+        list-stack-instances
+        describe-stack-instance
+
+
+

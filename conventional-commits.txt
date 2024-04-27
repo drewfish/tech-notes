@@ -1,0 +1,32 @@
+
+
+CONVENTIONAL COMMITS
+    https://www.conventionalcommits.org/en/v1.0.0/#summary
+    commit :=
+        <type>[(<scope>)]: <description>
+
+        [<body>]
+
+        [<footer>s]
+
+    type :=
+        BREAKING CHANGE         # semver major
+        build
+        chore
+        cli
+        docs
+        feat                    # semver minor
+        fix                     # semver patch
+        perf
+        refactor
+        revert
+        style
+        test
+
+    scope :=
+        <subsystem>
+        <phabricator ticket ID>
+
+    footer :=
+        BREAKING CHANGE:  <description>
+

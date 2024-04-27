@@ -1,0 +1,149 @@
+
+
+TAPS
+    https://docs.brew.sh/Taps
+    $ brew tap
+        lists
+    $ brew tab {org}/{repo}
+        taps https://github.com/{org}/homebrew-{repo}
+
+    https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap
+        $ brew tap-new
+
+
+WRITING FORMULAE
+    https://docs.brew.sh/Adding-Software-to-Homebrew#writing-the-formula
+    https://docs.brew.sh/Formula-Cookbook
+    https://rubydoc.brew.sh/Formula
+
+
+PYTHON
+    https://docs.brew.sh/Homebrew-and-Python
+    https://docs.brew.sh/Python-for-Formula-Authors
+
+    ~/upstream/Homebrew/homebrew-core/Formula examples
+        ansible
+            called out in homebrew docs
+        asciinema
+            {tgz}/pyproject.toml
+            {tgz}/setup.cfg
+            {tgz}/asciinema.egg-info/
+            {tgz}/asciinema/__main__.py
+                if __name__ == "__main__":
+            no poetry
+        astrometry-net
+            # appears to always get the latest
+            livecheck do
+                url :stable
+                strategy :github_latest
+            end
+        athenacli
+            {tgz}/setup.py
+        anime-downloader
+        bpytop
+            {tgz}/pyproject.toml
+            {tgz}/poetry.lock
+        core-lightning
+            url "...pythonhosted.org/..."
+            head "https://github.com/...", branch: "master"
+            depends_on "python@3.11"
+            resource "..." do ... end
+
+
+        COMMON PATTERNS
+            class Foo < Formula
+                include Language::Python::Virtualenv
+
+                desc "..."
+                homepage "https://..."
+                license "{SPDX}"
+
+                # for "stable" install
+                url ".../foo-1.2.3.tar.gz"
+                sha256 "..."
+                # ditto but from a Github Release
+                url "https://github.com/{org}/{repo}/releases/download/v1.2.3/foo.zip"
+                sha256 "..."
+                # for "head" install
+                head "https://github.com/bar/foo.git", branch: "main"
+
+                # these are formulae dependencies
+                depends_on "python@3.11"
+
+                # todo -- what are these resources for ?
+                # they appear to be pypi packages
+                resource "orange" do
+                    url "https://files.pythonhosted.org/packages/.../orange-2.3.4.tar.gz"
+                    sha256 "..."
+                end
+
+                def install
+                    virtualenv_install_with_resources
+                end
+
+                # these appear to be post-install tests
+                test do
+                    assert_match version.to_s, shell_output("#{bin}/foo --version")
+                    assert_match "baz", shell_output("#{bin}/foo bar", 1)
+                end
+            end
+
+        OTHER PATTERNS
+            url "https://github.com/mgbellemare/Arcade-Learning-Environment.git",
+                tag:      "v0.8.1",
+                revision: "ba84c1480008aa606ebc1efd7a04a7a7729796d4"
+
+
+
+
+JAVASCRIPT / TYPESCRIPT
+    https://docs.brew.sh/Node-for-Formula-Authors
+
+    std_npm_install_args
+        pack_path = `npm pack --ignore-scripts`
+        return [
+            -ddd
+                # --loglevel=silly
+            --global
+            --build-from-source
+            --cache=#{HOMEBREW_CACHE}/npm_cache
+            --prefix=#{libexec}
+            #{pack_path}
+        ]
+
+
+    example homebrew-core/Formula/ungit.rb
+        require "language/node"
+        depends_on "node"
+        def install
+            system "npm", "install", *Language::Node.std_npm_install_args(libexec)
+            bin.install_symlink Dir["#{libexec}/bin/*"]
+        end
+
+    YARN
+        example homebrew-core/Formula/phoneinfoga.rb
+            depends_on "yarn" => :build
+            def install
+                system "yarn", "install", "--immutable"
+                system "yarn", "build"
+            end
+        example homebrew-core/Formula/grafana.rb
+            depends_on "node" => :build
+            depends_on "yarn" => :build
+            def install
+                system "yarn", "install"
+                system "yarn", "build"
+            end
+
+
+
+
+PRIVATE GITHUB REPOS
+    https://dev.to/jhot/homebrew-and-private-github-repositories-1dfh
+        2022-01-27 homebrew@3
+
+    https://hackernoon.com/building-homebrew-taps-for-private-github-repos
+        2022-10-03
+
+
+

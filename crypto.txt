@@ -1,0 +1,277 @@
+
+
+KEY
+    piece of info that determines output of crypto algo
+    encryption:  transformation from plaintext to ciphertext
+    decryption:  transformation from ciphertext to plaintext
+    also for digital signature, message authentication codes
+    "only secrecy of the key provides security"
+    symmetric key
+        same key used for encryption and decryption
+    asymmetric key, keypair
+        public key used for encryption or signature verification
+        private key used for decryption and signature generation
+        finding private key very difficult, even if public key is known
+        keypair used to exchange on-the-fly symmetric key used for session
+        RSA popular public key system
+        DSA popular public key system, only used for signatures
+    ownership
+        keys often enriched with attributes (e.g. names, addresses)
+        signed package of key&attributes known as certificate
+            signed by certificate authority
+    compromised keys can be revoked (in PKI and PGP models)
+    intermediate certificate (PKI) or subkey (PGP)
+        everyday-used keys derived from principal private key
+    key size
+        80 bits considered the minimum for symmetric algos
+        128 bits common, considered very strong
+        public keys require longer lengths for an equivalent level of security
+        elliptic curve may allow smaller key sizes
+            use ECC key size twice that of symmetric size
+    key choice
+        generated truly randomly and contain sufficient entropy
+    key versus password
+        password meant to be generated, read, remembered, and entered by humans
+        key meant to be used by software
+
+
+HASH FUNCTION
+    cryptographic hash function (CHF)
+    maps data of arbitrary size (message) to bit array of fixed size (hash value, hash, message digest)
+    one-way function
+    properties
+        deterministic
+        quick
+        given a hash, infeasible to determine message that generates that hash
+        infeasible to find two different messages with same hash
+        small change to message leads to hash which appears to be unrelated
+
+
+HMAC
+    keyed-hash message authentication code
+    hash-based message authentication code
+    MAC that uses a CHF and secret key
+    any crypto function can be used to calculate an HMAC
+    HMAC-{fn} (e.g. HMAC-SHA256, HMAC-SHA3-256)
+    crypto strength of HMAC depends on
+        strength of underlying CHF
+        size of hash output
+        size & quality of key
+    two passes of hash computation
+
+
+DIGITAL SIGNATURE
+    verify authenticity of doc
+        doc created by known sender (authentication)
+        not altered during transit (integrity)
+    employ asymmetric crypto
+    three algos
+        key generation:  private key and associated public key
+        signature generation:  input message & private key, output signature
+        signature verification:  input message & public key & signature, output assertion of authenticity
+    hash-then-sign
+        algo
+            messgae hashed to short digest
+            which is padded
+            then signed
+        efficiency:  signing hash faster than signing doc
+    MD5(broken), SHA-1(broken), RIPEMD-160, Whirlpool, SHA-2, SHA-3, BLAKE2, BLAKE3
+
+
+MESSAGE AUTHENTICATION CODE -- MAC, tag
+    short piece of info used to authenticate a message
+    different from HASH FUNCTION
+        very similar, but
+        have different security requirements
+    different from DIGITAL SIGNATURE
+        MAC generated and validated using the same secret key
+    MESSAGE INTEGRITY CODE -- MIC
+        alias for message authentication code, esp in comms protocols
+        some use "MIC" to mean message digest (which doesn't use secret key)
+
+
+INITIALIZATION VECTOR -- IV
+    or starting variable (SV)
+    fixed-size input to a cypto primitive
+    typically required to be random or pseudorandom
+    some crypto primitives only require IV to be non-repeating
+        in this case, commonly called a nonce (number used once)
+    for block cyphers, generally same length as cipher block size
+    properties
+        depends on crypto scheme
+        uniqueness (basic)
+            don't use the same IV for the same key
+        unpredictable (many crypto schemas)
+            chosen at random or pseudorandom
+    "randomized" crypto schema
+        IV chosen by sender and sent to receiver
+    "stateful" crypto schema
+        IV shared by sender and receiver and updated in predefined way
+    stream ciphers are tricky, IV being one reason
+
+
+ELLIPTIC-CURVE CRYPTOGRAPHY -- ECC
+    allows smaller keys compared to non-EC crypto
+    for key agreement, digital signatures, pseudo-random generators, and more
+    base assumption
+        finding the discrete log of random elliptical curve element relative to public base point is infeasible
+    NIST suite B
+        elliptical-curve Diffie-Hellman (ECDH) for key exchange
+        elliptical curve digital signature algo (ECDSA) for digital signature
+
+
+FEISTEL NETWORK
+    invertable -- output can be decrypted (even if round fn isn't invertable)
+    round function
+        two inputs:  data block, subkey
+        returns:  output of same size as data block
+    each round
+        round function run on half data
+        output XORd with other half of data
+    blowfish, twofish, triple DES, RC5, skipjack
+
+
+SUBSTITUTION-PERMUTATION NETWORK (SPN)
+    series of linked math ops
+    used in block cipher algos
+    algo
+        input:  block of plaintext, key
+        several rounds, each
+            substitution boxes
+            permutations boxes
+            key introduced each round
+                usually with a "round key" derived from input key
+        output:  ciphertext block
+    decryption done by reversing process (and round keys)
+
+
+MATH/THEORY NOTES
+    IV -- initialization vector
+    SV -- starting variable (aka IV)
+    G (key generator) -- output pk & sk
+    pk -- public key
+    sk -- private key
+    S (signature generator) -- inputs sk & x -- output t
+    t -- tag (signature)
+    x -- string, message, document
+    V (signature verification) -- inputs pk & x & t -- output accepts or rejects
+
+
+AES algo
+    symmetric key block cipher
+    supercedes DES
+    successors anubis, grand cru, kalyna
+    key sizes 128, 192, 256 bits
+    block sizes 128 bits
+    structure substitution-permutation network
+    rounds 10, 12, 14
+    subset of Rijndael
+
+
+BLOWFISH algo
+    symmetric key block cipher
+    successors twofish
+    key sizes 32-448 bits
+    block sizes 64 bits
+    structure feistel network
+    rounds 16
+    in public domain
+    key-dependent S-boxes
+    highly complex key schedule
+
+
+MD5 algo
+    message digest algo
+    considered broken
+    digest sizes 128 bits
+    block sizes 512 bits
+    rounds 4
+
+
+RC5 algo
+    symmetric key block cipher
+    successors RC6, Akelarre
+    key sizes 0-2040 bits (128 bits suggested)
+    block sizes 32, 64, 128 bits (64 bits suggested)
+    structure feistel-like network
+    rounds 1-255 (12 suggested originally)
+
+
+RC6 algo
+    symmetric key block cipher
+    key sizes 128, 192, 256 bits
+    block sizes 128 bits
+    structure feistel network
+    rounds 20
+    derived from RC5
+
+
+SHA-1 algo
+    hash algo
+    considered broken
+    digest sizes 160 bits
+    block sizes 512 bits
+    rounds 80
+
+
+SHA-2 algos
+    hash algos
+    consists of SHA-256 and SHA-512
+    SHA-224 is variant of SHA-256
+    SHA-384 is variant of SHA-512
+
+
+SHA-3 algo
+    hash algo
+    subset of Keccak
+    SHA3-224 SHA3-256 SHA3-384 SHA3-512
+
+
+SKIPJACK algo
+    not recommended
+    symmetric key block cipher
+    key sizes 80 bits
+    block sizes 64 bits
+    structure unbalanced feistel network
+    rounds 32
+
+
+TWOFISH algo
+    symmetric key block cipher
+    key sizes 128, 192, 256 bits
+    block sizes 128 bits
+    structure feistel network
+    rounds 16
+    precomputed key-dependent S-boxes
+    complex key schedule
+    in public domain
+
+
+WHIRLPOOL algo
+
+
+OPENSSL algos
+    BLAKE2b512
+    BLAKE2s256
+    MD4 (RSA-MD4 md4WithRSAEncryption)
+    MD5 (RSA-MD5 md5WithRSAEncryption ssl3-md5)
+    MD5-SHA1
+    MDC2 (RSA-MDC2 mdc2WithRSA)
+    RIPEMD160 (ripemd RSA-RIPEMD160 ripemd160WithRSA rmd160)
+    SHA1 (RSA-SHA1 RSA-SHA1-2 sha1WithRSAEncryption ssl3-sha1)
+    SHA224 (RSA-SHA224 sha224WithRSAEncryption)
+    SHA256 (RSA-SHA256 sha256WithRSAEncryption)
+    SHA3-224 (RSA-SHA3-224 id-rsassa-pkcs1-v1_5-with-sha3-224)
+    SHA3-256 (RSA-SHA3-256 id-rsassa-pkcs1-v1_5-with-sha3-256)
+    SHA3-384 (RSA-SHA3-384 id-rsassa-pkcs1-v1_5-with-sha3-384)
+    SHA3-512 (RSA-SHA3-512 id-rsassa-pkcs1-v1_5-with-sha3-512)
+    SHA384 (RSA-SHA384 sha384WithRSAEncryption)
+    SHA512 (RSA-SHA512 sha512WithRSAEncryption)
+    SHA512-224 (RSA-SHA512/224 sha512-224WithRSAEncryption)
+    SHA512-256 (RSA-SHA512/256 sha512-256WithRSAEncryption))
+    SHAKE128
+    SHAKE256
+    SM3 (RSA-SM3 sm3WithRSAEncryption)
+    whirlpool
+
+

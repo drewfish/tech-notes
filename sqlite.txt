@@ -1,0 +1,175 @@
+
+
+COLUMN TYPES
+    https://sqlite.org/datatype3.html
+    storage classes
+        NULL
+        INTEGER
+        REAL    -- 8byte IEEE floating point
+        TEXT
+        BLOB
+    boolean
+        actually INTEGER
+    date & time
+        actually TEXT
+        builtin functions for manipulating
+        TEXT as ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS")
+        REAL as Julian day numbers, the number of days since noon in Greenwich on November 24, 4714 B.C. according to the proleptic Gregorian calendar
+        INTEGER as Unix Time, the number of seconds since 1970-01-01 00:00:00 UTC
+    storage affinities
+        INTEGER
+            INT INTEGER TINYINT SMALLINT MEDIUMINT BIGINT INT2 INT8
+            UNSIGNED BIG INT
+        TEXT
+            CHARACTER(20) VARCHAR(255) VARYING CHARACTER(255) NCHAR(55) NATIVE CHARACTER(70)
+            NVARCHAR(100) TEXT CLOB
+        REAL    -- 8byte IEEE floating point
+            REAL DOUBLE FLOAT
+            DOUBLE PRECISION
+        BLOB
+        NUMERIC
+            NUMERIC DECIMAL(10,5) BOOLEAN DATE DATETIME
+
+
+TRANSACTIONS
+    BEGIN TRANSACTION
+    COMMIT TRANSACTION
+    ROLLBACK TRANSACTION [TO SAVEPOINT {x}]
+
+
+SCALAR FUNCTIONS
+    abs(number X)
+    changes()
+    char(int X1,X2,...,XN) returns string composed of characters having unicode codepoints
+    coalesce(X,Y,...) returns a copy of first non-NULL arg, or NULL if all args are NULL
+    glob(str,pattern)
+    hex(blob X) returns hex string
+    ifnull(X,Y) equivalent to coalesce(X,Y)
+    iif(X,Y,Z) if X is true, returns Y, otherwise Z
+    instr(haystack,needle)
+        returns number of prior characters+1 of first needle in haystack
+        returns 0 if not found
+        byte count if both args are blobs, otherwise strings
+        returns NULL if either arg is NULL
+    last_insert_rowid()
+    length(X)
+        for strings returns character (not byte) count until first NUL character
+        for blob returns number of bytes
+        for number then returns number of chars to represent number as string
+        returns NULL if X is NULL
+    like(X,Y)
+    like(X,Y,Z)
+    likelihood(X,Y)
+    likely(X)
+    load_extension(X)
+    load_extension(X,Y)
+    lower(X)
+    ltrim(X)
+    ltrim(X,Y)
+    max(X,Y,...)
+    min(X,Y,...)
+    nullif(X,Y)
+    printf(FORMAT,...)
+    quote(X)
+    random()
+    randomblob(N)
+    replace(X,Y,Z)
+    round(X)
+    round(X,Y)
+    rtrim(X)
+    rtrim(X,Y)
+    soundex(X)
+    sqlite_compileoption_get(N)
+    sqlite_compileoption_used(N)
+    sqlite_offset(X)
+    sqlite_source_id()
+    sqlite_version()
+    substr(X,Y,Z)
+    substr(X,Y)
+    total_changes()
+    trim(X)
+    trim(X,Y)
+    typeof(X)
+    unicode(X)
+    unlikely(X)
+    upper(X)
+    zeroblob(N)
+
+
+DATE & TIME FUNCTIONS
+    https://sqlite.org/lang_datefunc.html
+    date(time-value, modifier, modifier, ...)
+    time(time-value, modifier, modifier, ...)
+    datetime(time-value, modifier, modifier, ...)
+    julianday(time-value, modifier, modifier, ...)
+    strftime(format, time-value, modifier, modifier, ...)
+    time-value
+        YYYY-MM-DD
+        YYYY-MM-DD HH:MM
+            can have optional timezone suffix [+-]HH:MM
+        YYYY-MM-DD HH:MM:SS
+            can have optional timezone suffix [+-]HH:MM
+        YYYY-MM-DD HH:MM:SS.SSS
+            can have optional timezone suffix [+-]HH:MM
+        YYYY-MM-DDTHH:MM
+            can have optional timezone suffix [+-]HH:MM
+        YYYY-MM-DDTHH:MM:SS
+            can have optional timezone suffix [+-]HH:MM
+        YYYY-MM-DDTHH:MM:SS.SSS
+            can have optional timezone suffix [+-]HH:MM
+        HH:MM
+            assumes date of 2000-01-01
+            can have optional timezone suffix [+-]HH:MM
+        HH:MM:SS
+            assumes date of 2000-01-01
+            can have optional timezone suffix [+-]HH:MM
+        HH:MM:SS.SSS
+            assumes date of 2000-01-01
+            can have optional timezone suffix [+-]HH:MM
+        'now'
+            uses UTC
+        DDDDDDDDDD  -- julian day number
+    modifiers
+        NNN days
+        NNN hours
+        NNN minutes
+        NNN.NNNN seconds
+        NNN months
+        NNN years
+        start of month
+        start of year
+        start of day
+        weekday N       -- moves date forward, 0=sunday
+        unixepoch       -- only works if following a DDDDDDDDDD time-value
+        localtime       -- assumes time-value is UTC and adjusts to local timezone
+        utc             -- assumes time-value is local timezone and adjusts to UTC
+    strftime formats
+        %d 		day of month: 00
+        %f 		fractional seconds: SS.SSS
+        %H 		hour: 00-24
+        %j 		day of year: 001-366
+        %J 		Julian day number
+        %m 		month: 01-12
+        %M 		minute: 00-59
+        %s 		seconds since 1970-01-01
+        %S 		seconds: 00-59
+        %w 		day of week 0-6 with Sunday==0
+        %W 		week of year: 00-53
+        %Y 		year: 0000-9999
+        %% 		%
+
+
+AGGREGATE FUNCTIONS
+    avg(X)
+    count(X)
+    count(*)
+    group_concat(X)
+    group_concat(X,Y)
+    max(X)
+    min(X)
+    sum(X)
+    total(X)
+
+
+
+

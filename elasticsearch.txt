@@ -1,0 +1,287 @@
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html
+    what is elasticsearch
+        data in:  documents and indices
+            mappings (schema)
+                distinguish between full-text string fields and exact value string fields
+                perform language-specific text analysis
+                optimize fields for partial matching
+                use custom date formats
+                use data types such as geo_point and geo_shape that cannot be automatically detected
+            index same field in different ways
+        searching
+            queries: structured, full-text, complex
+            JSON style query language
+        analyzing
+            aggregate to complex summaries
+    getting started
+        curl "http://localhost:9200/_cat/health?v"
+        curl "localhost:9200/_cat/indices?v"
+        index docs
+            PUT /{index}/_doc/{docid}
+            GET /{index}/_doc/{docid}
+                _source is doc as indexed
+            bulk API exists
+        searching
+            GET /{index}/_search
+            must_not is results filter
+            other filtering available
+        aggregates
+
+reference
+    index
+        settings
+            static
+            dynamic
+        other settings
+            analysis
+            mapping
+            merging
+            similarities
+            indexing pressure
+    mappings
+        PUT /my-index-000001
+        {
+            "mappings": {
+                "properties": {
+                    "age":    { "type": "integer" },
+                    "email":  { "type": "keyword"  },
+                    "name":   { "type": "text"  }
+                }
+            }
+        }
+        GET /{index}/_mapping
+        often useful to index the same field different ways
+        alias field type
+            "type": "alias"
+            "path": {json path}
+        arrays
+            no dedicated array type
+            all fields support multiple values
+            all values in the array must be the same type
+        binary field type
+            base64 encoded string
+            params:  doc_values, store
+        boolean field type
+            false values:  false, "false", "" (empty string)
+            true values:  true, "true"
+            params:  boost, doc_values, index, null_value, store, meta
+        date field type
+            params:  boost, doc_values, format, locale, ignore_malformed, index, null_value, store, meta
+        date_nanos field type
+            params:  same as date
+        dense_vector field type
+            can be used for document scoring
+        flattened field type (x-pack)
+            treat all subfields of an object as a single field
+            as keywords, so no special value searching
+            can be used in query types
+                term, terms, terms_set
+                prefix, range, match, multi_match
+                query_string, simple_query_string
+                exists
+            params
+                boost, depth_limit, doc_values, eager_global_ordinals, ignore_above
+                index, index_options, null_value, similarity, split_queries_on_whitespace
+        geo_point field type
+            lat, lon pair
+            can be used to
+                find point within bounding box, within distance of point, within polygon, within geo_shape query
+                aggregate docs geographically or by distance
+                integrate distance into relevance score
+                sort by distance
+            params:  ignore_malformed, ignore_z_value, null_value
+        geo_shape field type(s)
+        histogram field type
+        ip field type
+            IPv4 or IPv6
+            params:  boost, doc_values, index, null_value, store
+        join field type
+            creates parent:child relationships in same index
+            only one per index
+        keyword type family
+            often used in sorting, agging, term-level queries
+            keyword
+                structured content (emails, hostnames, statuscodes, etc)
+                params
+                    boost, doc_values, eager_global_ordinals, fields, ignore_above,
+                    index, index_options, norms, null_value, store, similarity
+                    split_queries_on_whitespace, meta
+            const_keyword
+                all docs have the same value (per index)
+                params:  meta, value
+            wildcard
+                optimized for wildcard (grep-like) queries
+                params:  ignore_above
+        nested field type
+            special version of `object` that allows arrays of objects
+            - queried with `nested` query
+            - analyzed with `nested` and `reverse_nested` aggs
+            - sorted with nested sorting
+            - retrieved and highlighted with nested inner hits
+            params:  dynamic, properties, include_in_parent, include_in_root
+        numeric field types
+            long(int64), integer(int32), short(int16), byte(int8)
+            double(64bit ieee754), float(32bit ieee754), half_float(16bit ieee754), scaled_float(long)
+            params:  coerce, boost, doc_values, ignore_malformed, index, null_value, store, meta
+                scaling_factor (scaled_float)
+        object field type
+            params:  dynamic, enabled, properties
+        percolator field type
+        point field type
+            x,y pairs
+            params:  ignore_malformed, ignore_z_value, null_value
+        range field types
+            value range between upper and lower
+            integer_range
+            float_range
+            long_range
+            double_range
+            date_range
+            ip_range
+            params:  coerce, boost, index, store
+        rank_feature field type
+            can only be used with `rank_feature` queries
+        rank_features field type
+            can only be used with `rank_feature` queries
+        search_as_you_go field type
+            text-like to support as-you-type completion
+            params
+                max_shingle_size
+                analyzer, index, index_options, norms, store, search_analyzer
+                search_quote_analyzer, similarity, term_vector
+        shape field types
+            point, linestring, polygon, multipoint, multilinestring, multipolygon, geometrycollection, envelope
+        sparse_vector field type
+            deprecated soon
+        text field type
+            sometimes useful to index as both `text` and `keyword`
+            params
+                analyzer, boost, eager_global_ordinals, fielddata, fielddata_frequency_filter
+                fields, index, index_options, index_prefixes, index_phrases, norms
+                position_increment_gap, store, search_analyzer, search_quote_analyzer
+                similarity, term_vector, meta
+        token_count field type
+            integer which accepts strings, indexing the number of tokens
+            params
+                analyzer, enable_position_increments, boost, doc_values, index, null_value, store
+        metadata fields
+            _index _type _id
+            _source _size
+            _field_names _ignored
+            _routing _meta
+        mapping parameters
+            analyzer
+            boost
+                only applied to term queries
+                (prefix, range, and fuzzy are not boosted)
+                default 1.0
+                can also be specified in query
+                applied at query time
+            coerce
+            copy_to
+                use to create aggregate pseudo-fields for faster querying
+            doc_values
+                helps sorting and agging
+                can't be used for `text` fields
+            dynamic
+            eager_global_ordinals
+                build global ordinals during index time (instead of search time)
+            enabled
+            fielddata
+                disabled by default
+                optimization for sorting and agging `text` fields
+                enabling can be expensive
+            fields (AKA multi-fields)
+                index same field in multiple ways
+            format
+                how to parse date strings
+                strict_date                 yyyy-MM-dd
+                strict_date_optional_time   yyyy-MM-dd'T'HH:mm:ss.SSSZ
+                strict_date_time            yyyy-MM-dd'T'HH:mm:ss.SSSZZ
+                strict_date_time_no_millis  yyyy-MM-dd'T'HH:mm:ssZZ
+            ignore_above
+                strings longer than ignore_above will not be indexed or stored
+            ignore_malformed
+            index
+                whether field is indexed
+                ? how different than `enabled` ?
+            index_options
+                only for `text` fields
+            index_phrases
+                enable two-term word combos (shingles) into separate field
+                works best when stopwords aren't removed
+            index_prefixes
+                speeds up prefix searches
+            meta
+                max 5 entries
+                key length max 20 chars
+                key length max 50 chars
+            normalizer
+                for `keyword` fields
+                guarantees that analysis generates a single token
+            norms
+                stores normalization factors used at query time to score doc relevancy
+                require a lot of disk space
+            null_value
+                for null values, what to index instead of nothing
+            position_increment_gap
+                positional gap between items in arrays of text
+            properties
+                defines sub-fields for mappings, object fields, nested fields
+            search_analyzer
+            similarity
+                configure scoring per field
+                mostly for `text` fields
+            store
+            term_vector
+        dynamic mapping
+            dynamic field mappings
+                null        no field
+                true/false  boolean field
+                float       float field
+                integer     long field
+                object      object field
+                array       depends on first non-null value
+                string      date or double or long or text with keyword subfield
+            dynamic templates
+                add fields based on
+                    data type, with `match_mapping_type`
+                    name of field, with `match` and `unmatch`, or `match_pattern`
+                    full dotted path, with `path_match` and `path_unmatch`
+    text analysis
+        convert unstructured text into structure for indexing
+https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-overview.html
+
+    index templates
+    data streams
+    ingest node
+
+    searching
+
+    query DSL
+
+    aggregations
+    EQL
+    SQL access
+    scripting
+    ILM: manage index lifecycle
+    monitor a cluster
+    frozen indices
+    rollup or transform data
+    HA
+    snapshot and restore
+    secure a cluster
+    alerting
+    command line tools
+
+    how to
+
+    glossary of terms
+
+    rest APIs
+
+
+
+
+

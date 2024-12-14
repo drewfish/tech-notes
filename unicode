@@ -37,6 +37,8 @@ https://tabatkins.github.io/symbols/
     U+2109 ℉
     U+2020 † dagger
     U+2021 ‡ double dagger
+    U+2022 • bullet
+    U+2026 … horizontal ellipsis
     U+2030 ‰ percent
     U+2031 ‱ permill
     U+203D ‽ interobang
@@ -107,7 +109,25 @@ https://tabatkins.github.io/symbols/
     U+258E ▎ left 1/4 block
     U+258F ▏ left 1/8 block
     U+2591 ░ light shade
+    U+2620 ☠ skull and crossbones
+    U+2622 ☢ radioactive sign
+    U+2623 ☣ biohazard sign
+    U+2638 ☸ wheel of dharma
+    U+263A ☺ smiling face
     U+267A ♺ recycling
     U+2713 ✓ check mark
 
 
+VIM
+    CTRL-V u 1234
+    ga      show values of character under cursor
+    g8      show utf-8 bytes
+    :set encoding=utf-8 fileencodings=
+            set utf8 for all files
+
+    You need to specify a font to be used.  For double-wide characters another
+    font is required, which is exactly twice as wide.  There are three ways to do
+    this:
+        1. Set 'guifont' and let Vim find a matching 'guifontwide'
+        2. Set 'guifont' and 'guifontwide'
+        3. Set 'guifontset'
